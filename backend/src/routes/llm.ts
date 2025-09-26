@@ -5,7 +5,6 @@ const router = express.Router();
 
 interface CalorieEstimationRequest {
   description: string;
-  model?: string;
   apiKey: string;
 }
 
@@ -21,7 +20,8 @@ interface CalorieEstimationResponse {
 // POST /api/llm/estimate-calories - Estimate calories from food description
 router.post('/estimate-calories', async (req, res) => {
   try {
-    const { description, model = 'gpt-3.5-turbo', apiKey }: CalorieEstimationRequest = req.body;
+    const { description, apiKey }: CalorieEstimationRequest = req.body;
+    const model = 'x-ai/grok-4-fast:free'; // Hardcoded to use grok-4-fast:free
 
     // Validate required fields
     if (!description || !apiKey) {

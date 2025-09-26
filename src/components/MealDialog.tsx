@@ -37,12 +37,6 @@ interface MealDialogProps {
   onSave: (meal: Meal) => void;
 }
 
-interface LLMModel {
-  id: string;
-  name: string;
-  description: string;
-}
-
 interface CalorieEstimation {
   calories: number;
   protein: number;
@@ -60,28 +54,15 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('x-ai/grok-4-fast:free');
   const [estimating, setEstimating] = useState(false);
   const [estimation, setEstimation] = useState<CalorieEstimation | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const models: LLMModel[] = [
-    { id: 'x-ai/grok-4-fast:free', name: 'Grok 4 Fast (Free)', description: 'xAI\'s latest multimodal model - Free tier' },
-    { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient OpenAI model' },
-    { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Latest GPT-4 model' },
-    { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', description: 'Fast Anthropic model' },
-    { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', description: 'Balanced Anthropic model' }
-  ];
-
-  // Load saved API key and model from localStorage
+  // Load saved API key from localStorage
   useEffect(() => {
     const savedApiKey = localStorage.getItem('calorie-tracker-api-key');
-    const savedModel = localStorage.getItem('calorie-tracker-model');
     if (savedApiKey) {
       setApiKey(savedApiKey);
-    }
-    if (savedModel) {
-      setSelectedModel(savedModel);
     }
   }, []);
 
@@ -129,7 +110,6 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         },
         body: JSON.stringify({
           description: description.trim(),
-          model: selectedModel,
           apiKey: apiKey.trim(),
         }),
       });
@@ -142,9 +122,8 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         setCarbs(data.carbs.toString());
         setFat(data.fat.toString());
         
-        // Save API key and model to localStorage for future use
+        // Save API key to localStorage for future use
         localStorage.setItem('calorie-tracker-api-key', apiKey.trim());
-        localStorage.setItem('calorie-tracker-model', selectedModel);
       } else {
         const error = await response.json();
         alert(`Error estimating calories: ${error.error}`);
@@ -358,32 +337,6 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
               </div>
             )}
 
-            {apiKey && (
-              <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                <p className="text-sm text-green-800">
-                  ✅ API key configured! You can now estimate calories seamlessly.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      <div>
-                        <div className="font-medium">{model.name}</div>
-                        <div className="text-sm text-muted-foreground">{model.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <Button
               onClick={handleEstimateCalories}
