@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,62 +7,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff } from 'lucide-react';
+import { Moon, Sun, Monitor } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface LLMModel {
-  id: string;
-  name: string;
-  description: string;
-}
-
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('x-ai/grok-4-fast:free');
-  const [showApiKey, setShowApiKey] = useState(false);
-
-  const models: LLMModel[] = [
-    { id: 'x-ai/grok-4-fast:free', name: 'Grok 4 Fast (Free)', description: 'xAI\'s latest multimodal model - Free tier' },
-    { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient OpenAI model' },
-    { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Latest GPT-4 model' },
-    { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', description: 'Fast Anthropic model' },
-    { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', description: 'Balanced Anthropic model' }
-  ];
-
-  // Load settings from localStorage
-  useEffect(() => {
-    if (open) {
-      const savedApiKey = localStorage.getItem('calorie-tracker-api-key') || '';
-      const savedModel = localStorage.getItem('calorie-tracker-model') || 'x-ai/grok-4-fast:free';
-      
-      setApiKey(savedApiKey);
-      setSelectedModel(savedModel);
-    }
-  }, [open]);
-
-  const handleSave = () => {
-    // Save settings to localStorage
-    localStorage.setItem('calorie-tracker-api-key', apiKey);
-    localStorage.setItem('calorie-tracker-model', selectedModel);
-    
-    onOpenChange(false);
-  };
+  const { theme, setTheme } = useTheme();
 
   const handleClearData = () => {
-    if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      localStorage.clear();
-      setApiKey('');
-      setSelectedModel('x-ai/grok-4-fast:free');
-      alert('All data has been cleared.');
+    // First confirmation
+    if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      return;
     }
+    
+    // Second confirmation
+    if (!confirm('This will permanently delete ALL your meal data and settings. Are you absolutely certain you want to continue?')) {
+      return;
+    }
+    
+    // Third confirmation
+    if (!confirm('FINAL WARNING: This is your last chance to cancel. All data will be permanently lost. Do you really want to proceed?')) {
+      return;
+    }
+    
+    localStorage.clear();
+    alert('All data has been cleared.');
   };
 
   return (
@@ -74,60 +47,55 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* API Configuration */}
+          {/* Theme Settings */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">API Configuration</CardTitle>
+              <CardTitle className="text-lg">Appearance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="api-key">OpenRouter API Key</Label>
-                <div className="relative">
-                  <Input
-                    id="api-key"
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-or-v1-..."
-                  />
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Choose your preferred theme
+                </p>
+                <div className="grid grid-cols-3 gap-2">
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowApiKey(!showApiKey)}
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('light')}
+                    className="flex items-center gap-2"
                   >
-                    {showApiKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('dark')}
+                    className="flex items-center gap-2"
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('system')}
+                    className="flex items-center gap-2"
+                  >
+                    <Monitor className="h-4 w-4" />
+                    System
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Configure once here for seamless AI calorie estimation. Your key is stored locally and never sent to our servers.
-                </p>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="model">Default Model</Label>
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        <div>
-                          <div className="font-medium">{model.name}</div>
-                          <div className="text-sm text-muted-foreground">{model.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
+          {/* AI Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">AI Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="bg-muted p-3 rounded-md">
                 <p className="text-sm text-muted-foreground">
                   <strong>API Provider:</strong> OpenRouter.ai
@@ -136,10 +104,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   This app uses OpenRouter&apos;s unified API to access multiple AI models for calorie estimation.
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <strong>Free Model:</strong> Grok 4 Fast is available at no cost!
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  💡 <strong>Tip:</strong> Once configured here, you won&apos;t need to enter your API key again for AI estimations.
+                  <strong>Current Model:</strong> Grok 4 Fast (Free)
                 </p>
               </div>
             </CardContent>
@@ -167,12 +132,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </Card>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            Save Settings
+        <div className="flex justify-end pt-4">
+          <Button onClick={() => onOpenChange(false)}>
+            Close
           </Button>
         </div>
       </DialogContent>

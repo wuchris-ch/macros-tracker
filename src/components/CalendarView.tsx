@@ -203,27 +203,39 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-primary">
-                {dailyTotals.reduce((sum, day) => sum + day.total_calories, 0)}
+                {dailyTotals.length > 0
+                  ? Math.round(dailyTotals.reduce((sum, day) => sum + day.total_calories, 0) / dailyTotals.length)
+                  : 0
+                }
               </p>
-              <p className="text-sm text-muted-foreground">Total Calories</p>
+              <p className="text-sm text-muted-foreground">Avg Calories/Day</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">
-                {dailyTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0).toFixed(1)}g
+                {dailyTotals.length > 0
+                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / dailyTotals.length).toFixed(1)
+                  : '0.0'
+                }g
               </p>
-              <p className="text-sm text-muted-foreground">Total Protein</p>
+              <p className="text-sm text-muted-foreground">Avg Protein/Day</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">
-                {dailyTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0).toFixed(1)}g
+                {dailyTotals.length > 0
+                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0) / dailyTotals.length).toFixed(1)
+                  : '0.0'
+                }g
               </p>
-              <p className="text-sm text-muted-foreground">Total Carbs</p>
+              <p className="text-sm text-muted-foreground">Avg Carbs/Day</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-600">
-                {dailyTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0).toFixed(1)}g
+                {dailyTotals.length > 0
+                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0) / dailyTotals.length).toFixed(1)
+                  : '0.0'
+                }g
               </p>
-              <p className="text-sm text-muted-foreground">Total Fat</p>
+              <p className="text-sm text-muted-foreground">Avg Fat/Day</p>
             </div>
           </div>
           
