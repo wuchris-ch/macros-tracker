@@ -1,0 +1,16 @@
+/// <reference types="jest" />
+/// <reference types="node" />
+
+// This file ensures Jest globals are available in test files
+declare global {
+  const describe: jest.Describe;
+  const it: jest.It;
+  const test: jest.It;
+  const expect: jest.Expect;
+  const beforeAll: jest.Lifecycle;
+  const afterAll: jest.Lifecycle;
+  const beforeEach: jest.Lifecycle;
+  const afterEach: jest.Lifecycle;
+}
+
+export {};
