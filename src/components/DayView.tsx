@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
 import { MealDialog } from '@/components/MealDialog';
+import { MacronutrientChart } from '@/components/charts/MacronutrientChart';
+import { ProgressBar } from '@/components/charts/ProgressBar';
 
 interface Meal {
   id: number;
@@ -20,6 +22,14 @@ interface Meal {
   updated_at: string;
 }
 
+interface UserGoals {
+  minCalories: number;
+  maxCalories: number;
+  proteinPercent: number;
+  carbsPercent: number;
+  fatPercent: number;
+}
+
 interface DayViewProps {
   date: Date;
   onBack: () => void;
@@ -30,9 +40,41 @@ export function DayView({ date, onBack }: DayViewProps) {
   const [loading, setLoading] = useState(false);
   const [showMealDialog, setShowMealDialog] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [userGoals, setUserGoals] = useState<UserGoals>({
+    minCalories: 1800,
+    maxCalories: 2200,
+    proteinPercent: 30,
+    carbsPercent: 40,
+    fatPercent: 30,
+  });
 
   const dateString = format(date, 'yyyy-MM-dd');
   const displayDate = format(date, 'EEEE, MMMM d, yyyy');
+
+  // Load user goals from localStorage
+  useEffect(() => {
+    const savedGoals = localStorage.getItem('calorie-tracker-goals');
+    if (savedGoals) {
+      try {
+        const goals = JSON.parse(savedGoals);
+        // Support both old and new format
+        if (goals.minCalories && goals.maxCalories) {
+          setUserGoals(goals);
+        } else if (goals.dailyCalories) {
+          // Migrate old format
+          setUserGoals({
+            minCalories: Math.round(goals.dailyCalories * 0.9),
+            maxCalories: goals.dailyCalories,
+            proteinPercent: goals.proteinPercent || 30,
+            carbsPercent: goals.carbsPercent || 40,
+            fatPercent: goals.fatPercent || 30,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading goals:', error);
+      }
+    }
+  }, []);
 
   // Fetch meals for the selected date
   useEffect(() => {
@@ -99,6 +141,12 @@ export function DayView({ date, onBack }: DayViewProps) {
   const totalCarbs = meals.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
   const totalFat = meals.reduce((sum, meal) => sum + (meal.fat || 0), 0);
 
+  // Calculate macro goals in grams based on max calories
+  const totalMacroGrams = totalProtein + totalCarbs + totalFat;
+  const proteinGoalGrams = (userGoals.maxCalories * (userGoals.proteinPercent / 100)) / 4; // 4 cal/g
+  const carbsGoalGrams = (userGoals.maxCalories * (userGoals.carbsPercent / 100)) / 4; // 4 cal/g
+  const fatGoalGrams = (userGoals.maxCalories * (userGoals.fatPercent / 100)) / 9; // 9 cal/g
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,6 +197,53 @@ export function DayView({ date, onBack }: DayViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Progress Bars */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily Progress</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ProgressBar
+            current={totalCalories}
+            goal={userGoals.maxCalories}
+            minGoal={userGoals.minCalories}
+            label="Calories"
+            unit=""
+          />
+          <ProgressBar
+            current={totalProtein}
+            goal={proteinGoalGrams}
+            label="Protein"
+            color="#2563eb"
+            unit="g"
+          />
+          <ProgressBar
+            current={totalCarbs}
+            goal={carbsGoalGrams}
+            label="Carbs"
+            color="#16a34a"
+            unit="g"
+          />
+          <ProgressBar
+            current={totalFat}
+            goal={fatGoalGrams}
+            label="Fat"
+            color="#ea580c"
+            unit="g"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Macronutrient Chart */}
+      {totalMacroGrams > 0 && (
+        <MacronutrientChart
+          protein={totalProtein}
+          carbs={totalCarbs}
+          fat={totalFat}
+          goals={userGoals}
+        />
+      )}
 
       {/* Meals List */}
       <div className="space-y-4">

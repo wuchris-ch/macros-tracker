@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, subDays } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrendChart } from '@/components/charts/TrendChart';
 
 interface DailyTotal {
   date: string;
@@ -36,6 +38,32 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [statsDateRange, setStatsDateRange] = useState<'all-time' | 'current-month' | 'custom'>('all-time');
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+  const [minCalories, setMinCalories] = useState<number>(1800);
+  const [maxCalories, setMaxCalories] = useState<number>(2200);
+  const [trendPeriod, setTrendPeriod] = useState<'week' | 'month'>('month');
+  const [trendData, setTrendData] = useState<Array<{ date: string; calories: number; protein: number }>>([]);
+
+  // Load user goals from localStorage
+  useEffect(() => {
+    const savedGoals = localStorage.getItem('calorie-tracker-goals');
+    if (savedGoals) {
+      try {
+        const goals = JSON.parse(savedGoals);
+        // Support both old and new format
+        if (goals.minCalories && goals.maxCalories) {
+          setMinCalories(goals.minCalories);
+          setMaxCalories(goals.maxCalories);
+        } else if (goals.dailyCalories) {
+          // Migrate old format: use dailyCalories as max, set min to 90% of it
+          const oldGoal = goals.dailyCalories;
+          setMinCalories(Math.round(oldGoal * 0.9));
+          setMaxCalories(oldGoal);
+        }
+      } catch (error) {
+        console.error('Error loading goals:', error);
+      }
+    }
+  }, []);
 
   // Fetch daily totals for the current month including visible dates from adjacent months
   useEffect(() => {
@@ -110,6 +138,36 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
     fetchStatsTotals();
   }, [statsDateRange, currentMonth, customStartDate, customEndDate]);
 
+  // Fetch trend data
+  useEffect(() => {
+    const fetchTrendData = async () => {
+      try {
+        const days = trendPeriod === 'week' ? 7 : 30;
+        const endDate = format(new Date(), 'yyyy-MM-dd');
+        const startDate = format(subDays(new Date(), days - 1), 'yyyy-MM-dd');
+        
+        const response = await fetch(`/api/meals/totals/${startDate}/${endDate}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Transform data for TrendChart
+          // Include ALL dates from the API response
+          // Use null for days with 0 values so the chart can skip them with connectNulls
+          const transformedData = data.map((day: DailyTotal) => ({
+            date: day.date,
+            calories: day.total_calories || null,
+            protein: day.total_protein || null,
+          }));
+          setTrendData(transformedData);
+        }
+      } catch (error) {
+        console.error('Error fetching trend data:', error);
+      }
+    };
+
+    fetchTrendData();
+  }, [trendPeriod]);
+
   // Get nutrition data for a specific date
   const getNutritionForDate = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -121,25 +179,46 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
     };
   };
 
-  // Custom day content to show nutrition totals
+  // Get heatmap color based on calorie intake vs range
+  const getHeatmapColor = (calories: number) => {
+    if (calories === 0) return 'bg-background';
+    
+    if (calories < minCalories) {
+      // Too low - purple shades
+      const ratio = calories / minCalories;
+      if (ratio < 0.7) return 'bg-purple-300 dark:bg-purple-900';
+      return 'bg-purple-200 dark:bg-purple-800';
+    } else if (calories <= maxCalories) {
+      // Within range - green shades
+      return 'bg-green-200 dark:bg-green-900';
+    } else {
+      // Over max - red shades
+      const ratio = calories / maxCalories;
+      if (ratio > 1.3) return 'bg-red-300 dark:bg-red-900';
+      return 'bg-red-200 dark:bg-red-800';
+    }
+  };
+
+  // Custom day content to show nutrition totals with heatmap
   const renderDay = (date: Date) => {
     const { calories, protein, hasData } = getNutritionForDate(date);
     const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+    const heatmapColor = getHeatmapColor(calories);
     
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-2 min-h-[80px]">
+      <div className={`w-full h-full flex flex-col items-center justify-center p-2 min-h-[80px] ${heatmapColor} transition-colors`}>
         <span className={`text-base font-medium mb-1 ${isToday ? 'font-bold text-primary' : ''}`}>
           {format(date, 'd')}
         </span>
         {hasData ? (
           <div className="flex flex-col items-center space-y-1">
             <div className="flex items-center justify-center">
-              <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full">
                 {calories}cal
               </span>
             </div>
             <div className="flex items-center justify-center">
-              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full">
                 {protein.toFixed(0)}g
               </span>
             </div>
@@ -227,18 +306,28 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                 }}
               />
             </div>
+            
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-foreground">
                 Click on any date to view and manage meals for that day
               </p>
-              <div className="flex items-center justify-center space-x-8 text-xs text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-orange-50 border border-orange-200 rounded-full"></div>
-                  <span>Calories</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-50 border border-blue-200 rounded-full"></div>
-                  <span>Protein (g)</span>
+              
+              {/* Heatmap Legend */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Calorie Heatmap</p>
+                <div className="flex items-center justify-center gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-purple-200 dark:bg-purple-800 border rounded"></div>
+                    <span>Below {minCalories} cal</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-green-200 dark:bg-green-900 border rounded"></div>
+                    <span>{minCalories}-{maxCalories} cal</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-red-200 dark:bg-red-800 border rounded"></div>
+                    <span>Above {maxCalories} cal</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -360,6 +449,46 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Trends Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Nutrition Trends</CardTitle>
+            <Select value={trendPeriod} onValueChange={(value: 'week' | 'month') => setTrendPeriod(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Last 7 Days</SelectItem>
+                <SelectItem value="month">Last 30 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="calories" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="calories">Calories</TabsTrigger>
+              <TabsTrigger value="protein">Protein</TabsTrigger>
+            </TabsList>
+            <TabsContent value="calories" className="mt-4">
+              <TrendChart
+                data={trendData}
+                metric="calories"
+                period={trendPeriod}
+              />
+            </TabsContent>
+            <TabsContent value="protein" className="mt-4">
+              <TrendChart
+                data={trendData}
+                metric="protein"
+                period={trendPeriod}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

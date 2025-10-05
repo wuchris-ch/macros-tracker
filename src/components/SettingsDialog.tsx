@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,6 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 
@@ -16,8 +19,57 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface UserGoals {
+  minCalories: number;
+  maxCalories: number;
+  proteinPercent: number;
+  carbsPercent: number;
+  fatPercent: number;
+}
+
+const DEFAULT_GOALS: UserGoals = {
+  minCalories: 1800,
+  maxCalories: 2200,
+  proteinPercent: 30,
+  carbsPercent: 40,
+  fatPercent: 30,
+};
+
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
+  const [goals, setGoals] = useState<UserGoals>(DEFAULT_GOALS);
+
+  // Load goals from localStorage on mount
+  useEffect(() => {
+    const savedGoals = localStorage.getItem('calorie-tracker-goals');
+    if (savedGoals) {
+      try {
+        setGoals(JSON.parse(savedGoals));
+      } catch (error) {
+        console.error('Error loading goals:', error);
+      }
+    }
+  }, []);
+
+  // Save goals to localStorage
+  const handleSaveGoals = () => {
+    localStorage.setItem('calorie-tracker-goals', JSON.stringify(goals));
+    alert('Goals saved successfully!');
+  };
+
+  const handleGoalChange = (field: keyof UserGoals, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setGoals(prev => ({ ...prev, [field]: numValue }));
+  };
+
+  const handleSaveGoalsWithValidation = () => {
+    // Validate that max > min
+    if (goals.maxCalories <= goals.minCalories) {
+      alert('Maximum calories must be greater than minimum calories!');
+      return;
+    }
+    handleSaveGoals();
+  };
 
   const handleClearData = () => {
     // First confirmation
@@ -86,6 +138,103 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     System
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Goals Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Daily Goals</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="minCalories">Minimum Daily Calories</Label>
+                  <Input
+                    id="minCalories"
+                    type="number"
+                    value={goals.minCalories}
+                    onChange={(e) => handleGoalChange('minCalories', e.target.value)}
+                    min="0"
+                    step="100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maxCalories">Maximum Daily Calories</Label>
+                  <Input
+                    id="maxCalories"
+                    type="number"
+                    value={goals.maxCalories}
+                    onChange={(e) => handleGoalChange('maxCalories', e.target.value)}
+                    min="0"
+                    step="100"
+                  />
+                  {goals.maxCalories <= goals.minCalories && (
+                    <p className="text-xs text-orange-600">
+                      Maximum must be greater than minimum
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Macronutrient Targets (%)</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="proteinPercent" className="text-xs text-blue-600">
+                        Protein
+                      </Label>
+                      <Input
+                        id="proteinPercent"
+                        type="number"
+                        value={goals.proteinPercent}
+                        onChange={(e) => handleGoalChange('proteinPercent', e.target.value)}
+                        min="0"
+                        max="100"
+                        step="5"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="carbsPercent" className="text-xs text-green-600">
+                        Carbs
+                      </Label>
+                      <Input
+                        id="carbsPercent"
+                        type="number"
+                        value={goals.carbsPercent}
+                        onChange={(e) => handleGoalChange('carbsPercent', e.target.value)}
+                        min="0"
+                        max="100"
+                        step="5"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="fatPercent" className="text-xs text-orange-600">
+                        Fat
+                      </Label>
+                      <Input
+                        id="fatPercent"
+                        type="number"
+                        value={goals.fatPercent}
+                        onChange={(e) => handleGoalChange('fatPercent', e.target.value)}
+                        min="0"
+                        max="100"
+                        step="5"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Total: {goals.proteinPercent + goals.carbsPercent + goals.fatPercent}%
+                    {goals.proteinPercent + goals.carbsPercent + goals.fatPercent !== 100 && (
+                      <span className="text-orange-600 ml-1">(should equal 100%)</span>
+                    )}
+                  </p>
+                </div>
+
+                <Button onClick={handleSaveGoalsWithValidation} className="w-full">
+                  Save Goals
+                </Button>
               </div>
             </CardContent>
           </Card>
