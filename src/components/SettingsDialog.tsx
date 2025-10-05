@@ -22,17 +22,17 @@ interface SettingsDialogProps {
 interface UserGoals {
   minCalories: number;
   maxCalories: number;
-  proteinPercent: number;
-  carbsPercent: number;
-  fatPercent: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
 }
 
 const DEFAULT_GOALS: UserGoals = {
   minCalories: 1800,
   maxCalories: 2200,
-  proteinPercent: 30,
-  carbsPercent: 40,
-  fatPercent: 30,
+  proteinGrams: 150,
+  carbsGrams: 200,
+  fatGrams: 65,
 };
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
@@ -44,7 +44,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     const savedGoals = localStorage.getItem('calorie-tracker-goals');
     if (savedGoals) {
       try {
-        setGoals(JSON.parse(savedGoals));
+        const parsedGoals = JSON.parse(savedGoals);
+        
+        // Migrate from old percentage-based format to grams
+        if (parsedGoals.proteinPercent !== undefined) {
+          const maxCal = parsedGoals.maxCalories || 2200;
+          setGoals({
+            minCalories: parsedGoals.minCalories || 1800,
+            maxCalories: maxCal,
+            proteinGrams: Math.round((maxCal * (parsedGoals.proteinPercent || 30) / 100) / 4),
+            carbsGrams: Math.round((maxCal * (parsedGoals.carbsPercent || 40) / 100) / 4),
+            fatGrams: Math.round((maxCal * (parsedGoals.fatPercent || 30) / 100) / 9),
+          });
+          // Save migrated format
+          localStorage.setItem('calorie-tracker-goals', JSON.stringify({
+            minCalories: parsedGoals.minCalories || 1800,
+            maxCalories: maxCal,
+            proteinGrams: Math.round((maxCal * (parsedGoals.proteinPercent || 30) / 100) / 4),
+            carbsGrams: Math.round((maxCal * (parsedGoals.carbsPercent || 40) / 100) / 4),
+            fatGrams: Math.round((maxCal * (parsedGoals.fatPercent || 30) / 100) / 9),
+          }));
+        } else {
+          setGoals(parsedGoals);
+        }
       } catch (error) {
         console.error('Error loading goals:', error);
       }
@@ -179,57 +201,51 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Macronutrient Targets (%)</Label>
+                  <Label>Macronutrient Targets (grams)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Set to 0 to not track that macronutrient
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="proteinPercent" className="text-xs text-blue-600">
-                        Protein
+                      <Label htmlFor="proteinGrams" className="text-xs text-blue-600">
+                        Protein (g)
                       </Label>
                       <Input
-                        id="proteinPercent"
+                        id="proteinGrams"
                         type="number"
-                        value={goals.proteinPercent}
-                        onChange={(e) => handleGoalChange('proteinPercent', e.target.value)}
+                        value={goals.proteinGrams}
+                        onChange={(e) => handleGoalChange('proteinGrams', e.target.value)}
                         min="0"
-                        max="100"
-                        step="5"
+                        step="1"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="carbsPercent" className="text-xs text-green-600">
-                        Carbs
+                      <Label htmlFor="carbsGrams" className="text-xs text-green-600">
+                        Carbs (g)
                       </Label>
                       <Input
-                        id="carbsPercent"
+                        id="carbsGrams"
                         type="number"
-                        value={goals.carbsPercent}
-                        onChange={(e) => handleGoalChange('carbsPercent', e.target.value)}
+                        value={goals.carbsGrams}
+                        onChange={(e) => handleGoalChange('carbsGrams', e.target.value)}
                         min="0"
-                        max="100"
-                        step="5"
+                        step="1"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="fatPercent" className="text-xs text-orange-600">
-                        Fat
+                      <Label htmlFor="fatGrams" className="text-xs text-orange-600">
+                        Fat (g)
                       </Label>
                       <Input
-                        id="fatPercent"
+                        id="fatGrams"
                         type="number"
-                        value={goals.fatPercent}
-                        onChange={(e) => handleGoalChange('fatPercent', e.target.value)}
+                        value={goals.fatGrams}
+                        onChange={(e) => handleGoalChange('fatGrams', e.target.value)}
                         min="0"
-                        max="100"
-                        step="5"
+                        step="1"
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Total: {goals.proteinPercent + goals.carbsPercent + goals.fatPercent}%
-                    {goals.proteinPercent + goals.carbsPercent + goals.fatPercent !== 100 && (
-                      <span className="text-orange-600 ml-1">(should equal 100%)</span>
-                    )}
-                  </p>
                 </div>
 
                 <Button onClick={handleSaveGoalsWithValidation} className="w-full">

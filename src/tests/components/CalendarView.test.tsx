@@ -53,10 +53,11 @@ describe('CalendarView', () => {
 
   it('loads user goal from localStorage', async () => {
     const mockGoals = {
-      dailyCalories: 2500,
-      proteinPercent: 30,
-      carbsPercent: 40,
-      fatPercent: 30,
+      minCalories: 2000,
+      maxCalories: 2500,
+      proteinGrams: 150,
+      carbsGrams: 200,
+      fatGrams: 65,
     };
     localStorage.setItem('calorie-tracker-goals', JSON.stringify(mockGoals));
 

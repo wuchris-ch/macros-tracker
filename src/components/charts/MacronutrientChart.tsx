@@ -7,6 +7,7 @@ interface TooltipPayload {
   name: string;
   value: number;
   percent: number;
+  goal: number;
 }
 
 interface MacronutrientChartProps {
@@ -14,9 +15,9 @@ interface MacronutrientChartProps {
   carbs: number;
   fat: number;
   goals?: {
-    proteinPercent: number;
-    carbsPercent: number;
-    fatPercent: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatGrams: number;
   };
 }
 
@@ -51,16 +52,16 @@ export function MacronutrientChart({ protein, carbs, fat, goals }: Macronutrient
   const fatPercent = (fat / totalMacros) * 100;
 
   const data = [
-    { name: 'Protein', value: protein, percent: proteinPercent },
-    { name: 'Carbs', value: carbs, percent: carbsPercent },
-    { name: 'Fat', value: fat, percent: fatPercent },
+    { name: 'Protein', value: protein, percent: proteinPercent, goal: goals?.proteinGrams || 0 },
+    { name: 'Carbs', value: carbs, percent: carbsPercent, goal: goals?.carbsGrams || 0 },
+    { name: 'Fat', value: fat, percent: fatPercent, goal: goals?.fatGrams || 0 },
   ];
 
-  // Check if ratios meet targets
+  // Check if grams meet targets (within 10% tolerance)
   const meetsTargets = goals ? {
-    protein: Math.abs(proteinPercent - goals.proteinPercent) <= 5,
-    carbs: Math.abs(carbsPercent - goals.carbsPercent) <= 5,
-    fat: Math.abs(fatPercent - goals.fatPercent) <= 5,
+    protein: goals.proteinGrams > 0 ? Math.abs(protein - goals.proteinGrams) <= (goals.proteinGrams * 0.1) : null,
+    carbs: goals.carbsGrams > 0 ? Math.abs(carbs - goals.carbsGrams) <= (goals.carbsGrams * 0.1) : null,
+    fat: goals.fatGrams > 0 ? Math.abs(fat - goals.fatGrams) <= (goals.fatGrams * 0.1) : null,
   } : null;
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: TooltipPayload }> }) => {
@@ -70,9 +71,9 @@ export function MacronutrientChart({ protein, carbs, fat, goals }: Macronutrient
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold">{data.name}</p>
           <p className="text-sm">{data.value.toFixed(1)}g ({data.percent.toFixed(1)}%)</p>
-          {goals && (
+          {goals && data.goal > 0 && (
             <p className="text-xs text-muted-foreground">
-              Target: {goals[`${data.name.toLowerCase()}Percent` as keyof typeof goals]}%
+              Target: {data.goal}g
             </p>
           )}
         </div>
@@ -137,10 +138,10 @@ export function MacronutrientChart({ protein, carbs, fat, goals }: Macronutrient
                       </span>
                     </div>
                   </div>
-                  {goals && (
+                  {goals && macro.goal > 0 && (
                     <div className="flex items-center justify-between text-xs text-muted-foreground pl-5">
-                      <span>Target: {goals[`${macroKey}Percent` as keyof typeof goals]}%</span>
-                      {meetsTarget !== undefined && (
+                      <span>Target: {macro.goal}g</span>
+                      {meetsTarget !== undefined && meetsTarget !== null && (
                         <span className={meetsTarget ? 'text-green-600' : 'text-orange-600'}>
                           {meetsTarget ? '✓ On target' : '⚠ Off target'}
                         </span>

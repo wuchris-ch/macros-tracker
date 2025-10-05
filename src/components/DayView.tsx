@@ -25,9 +25,9 @@ interface Meal {
 interface UserGoals {
   minCalories: number;
   maxCalories: number;
-  proteinPercent: number;
-  carbsPercent: number;
-  fatPercent: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
 }
 
 interface DayViewProps {
@@ -43,9 +43,9 @@ export function DayView({ date, onBack }: DayViewProps) {
   const [userGoals, setUserGoals] = useState<UserGoals>({
     minCalories: 1800,
     maxCalories: 2200,
-    proteinPercent: 30,
-    carbsPercent: 40,
-    fatPercent: 30,
+    proteinGrams: 150,
+    carbsGrams: 200,
+    fatGrams: 65,
   });
 
   const dateString = format(date, 'yyyy-MM-dd');
@@ -57,18 +57,29 @@ export function DayView({ date, onBack }: DayViewProps) {
     if (savedGoals) {
       try {
         const goals = JSON.parse(savedGoals);
-        // Support both old and new format
-        if (goals.minCalories && goals.maxCalories) {
-          setUserGoals(goals);
+        
+        // Migrate from old percentage-based format to grams
+        if (goals.proteinPercent !== undefined) {
+          const maxCal = goals.maxCalories || 2200;
+          setUserGoals({
+            minCalories: goals.minCalories || 1800,
+            maxCalories: maxCal,
+            proteinGrams: Math.round((maxCal * (goals.proteinPercent || 30) / 100) / 4),
+            carbsGrams: Math.round((maxCal * (goals.carbsPercent || 40) / 100) / 4),
+            fatGrams: Math.round((maxCal * (goals.fatPercent || 30) / 100) / 9),
+          });
         } else if (goals.dailyCalories) {
-          // Migrate old format
+          // Migrate even older format
+          const maxCal = goals.dailyCalories;
           setUserGoals({
             minCalories: Math.round(goals.dailyCalories * 0.9),
-            maxCalories: goals.dailyCalories,
-            proteinPercent: goals.proteinPercent || 30,
-            carbsPercent: goals.carbsPercent || 40,
-            fatPercent: goals.fatPercent || 30,
+            maxCalories: maxCal,
+            proteinGrams: Math.round((maxCal * (goals.proteinPercent || 30) / 100) / 4),
+            carbsGrams: Math.round((maxCal * (goals.carbsPercent || 40) / 100) / 4),
+            fatGrams: Math.round((maxCal * (goals.fatPercent || 30) / 100) / 9),
           });
+        } else {
+          setUserGoals(goals);
         }
       } catch (error) {
         console.error('Error loading goals:', error);
@@ -141,11 +152,8 @@ export function DayView({ date, onBack }: DayViewProps) {
   const totalCarbs = meals.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
   const totalFat = meals.reduce((sum, meal) => sum + (meal.fat || 0), 0);
 
-  // Calculate macro goals in grams based on max calories
+  // Use gram goals directly from settings
   const totalMacroGrams = totalProtein + totalCarbs + totalFat;
-  const proteinGoalGrams = (userGoals.maxCalories * (userGoals.proteinPercent / 100)) / 4; // 4 cal/g
-  const carbsGoalGrams = (userGoals.maxCalories * (userGoals.carbsPercent / 100)) / 4; // 4 cal/g
-  const fatGoalGrams = (userGoals.maxCalories * (userGoals.fatPercent / 100)) / 9; // 9 cal/g
 
   return (
     <div className="space-y-6">
@@ -211,27 +219,33 @@ export function DayView({ date, onBack }: DayViewProps) {
             label="Calories"
             unit=""
           />
-          <ProgressBar
-            current={totalProtein}
-            goal={proteinGoalGrams}
-            label="Protein"
-            color="#2563eb"
-            unit="g"
-          />
-          <ProgressBar
-            current={totalCarbs}
-            goal={carbsGoalGrams}
-            label="Carbs"
-            color="#16a34a"
-            unit="g"
-          />
-          <ProgressBar
-            current={totalFat}
-            goal={fatGoalGrams}
-            label="Fat"
-            color="#ea580c"
-            unit="g"
-          />
+          {userGoals.proteinGrams > 0 && (
+            <ProgressBar
+              current={totalProtein}
+              goal={userGoals.proteinGrams}
+              label="Protein"
+              color="#2563eb"
+              unit="g"
+            />
+          )}
+          {userGoals.carbsGrams > 0 && (
+            <ProgressBar
+              current={totalCarbs}
+              goal={userGoals.carbsGrams}
+              label="Carbs"
+              color="#16a34a"
+              unit="g"
+            />
+          )}
+          {userGoals.fatGrams > 0 && (
+            <ProgressBar
+              current={totalFat}
+              goal={userGoals.fatGrams}
+              label="Fat"
+              color="#ea580c"
+              unit="g"
+            />
+          )}
         </CardContent>
       </Card>
 

@@ -57,16 +57,16 @@ describe('MacronutrientChart', () => {
         carbs={200}
         fat={50}
         goals={{
-          proteinPercent: 30,
-          carbsPercent: 50,
-          fatPercent: 20,
+          proteinGrams: 120,
+          carbsGrams: 180,
+          fatGrams: 60,
         }}
       />
     );
 
-    expect(screen.getByText('Target: 30%')).toBeInTheDocument();
-    expect(screen.getByText('Target: 50%')).toBeInTheDocument();
-    expect(screen.getByText('Target: 20%')).toBeInTheDocument();
+    expect(screen.getByText('Target: 120g')).toBeInTheDocument();
+    expect(screen.getByText('Target: 180g')).toBeInTheDocument();
+    expect(screen.getByText('Target: 60g')).toBeInTheDocument();
   });
 
   it('indicates when macros meet targets', () => {
@@ -76,9 +76,9 @@ describe('MacronutrientChart', () => {
         carbs={200}
         fat={50}
         goals={{
-          proteinPercent: 30, // Actual: 28.6% - within 5% tolerance
-          carbsPercent: 57,   // Actual: 57.1% - within 5% tolerance
-          fatPercent: 15,     // Actual: 14.3% - within 5% tolerance
+          proteinGrams: 105, // Actual: 100g - within 10% tolerance
+          carbsGrams: 205,   // Actual: 200g - within 10% tolerance
+          fatGrams: 52,      // Actual: 50g - within 10% tolerance
         }}
       />
     );
@@ -94,9 +94,9 @@ describe('MacronutrientChart', () => {
         carbs={200}
         fat={50}
         goals={{
-          proteinPercent: 50, // Actual: 28.6% - more than 5% off
-          carbsPercent: 30,   // Actual: 57.1% - more than 5% off
-          fatPercent: 20,     // Actual: 14.3% - more than 5% off
+          proteinGrams: 150, // Actual: 100g - more than 10% off
+          carbsGrams: 100,   // Actual: 200g - more than 10% off
+          fatGrams: 80,      // Actual: 50g - more than 10% off
         }}
       />
     );

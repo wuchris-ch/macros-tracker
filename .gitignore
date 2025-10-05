@@ -48,3 +48,6 @@ yarn-error.log*
 *.sqlite3
 next-env.d.ts
 backend/calorie_tracker.db
+
+# Qdrant vector database storage
+qdrant_storage/
