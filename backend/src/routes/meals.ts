@@ -4,21 +4,28 @@ import { Database } from '../database';
 const router = express.Router();
 const db = new Database();
 
-// GET /api/meals/:date - Get all meals for a specific date
-router.get('/:date', async (req, res) => {
+// GET /api/meals/stats - Get all-time stats with optional date range filtering
+// IMPORTANT: This route must come BEFORE /:date to avoid matching "stats" as a date
+router.get('/stats', async (req, res) => {
   try {
-    const { date } = req.params;
+    const { startDate, endDate } = req.query;
     
-    // Validate date format (YYYY-MM-DD)
+    // Validate date formats if provided
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    if (startDate && typeof startDate === 'string' && !dateRegex.test(startDate)) {
+      return res.status(400).json({ error: 'Invalid startDate format. Use YYYY-MM-DD' });
+    }
+    if (endDate && typeof endDate === 'string' && !dateRegex.test(endDate)) {
+      return res.status(400).json({ error: 'Invalid endDate format. Use YYYY-MM-DD' });
     }
 
-    const meals = await db.getMealsByDate(date);
-    res.json(meals);
+    const totals = await db.getAllTimeDailyTotals(
+      startDate as string | undefined,
+      endDate as string | undefined
+    );
+    res.json(totals);
   } catch (error) {
-    console.error('Error fetching meals:', error);
+    console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -38,6 +45,25 @@ router.get('/totals/:startDate/:endDate', async (req, res) => {
     res.json(totals);
   } catch (error) {
     console.error('Error fetching daily totals:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/meals/:date - Get all meals for a specific date
+router.get('/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    const meals = await db.getMealsByDate(date);
+    res.json(meals);
+  } catch (error) {
+    console.error('Error fetching meals:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

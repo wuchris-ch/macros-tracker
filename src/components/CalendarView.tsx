@@ -4,8 +4,15 @@ import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface DailyTotal {
   date: string;
@@ -23,7 +30,12 @@ interface CalendarViewProps {
 export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>([]);
+  const [statsTotals, setStatsTotals] = useState<DailyTotal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsDateRange, setStatsDateRange] = useState<'all-time' | 'current-month' | 'custom'>('all-time');
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
 
   // Fetch daily totals for the current month
   useEffect(() => {
@@ -50,6 +62,45 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
 
     fetchDailyTotals();
   }, [currentMonth]);
+
+  // Fetch stats totals based on selected date range
+  useEffect(() => {
+    const fetchStatsTotals = async () => {
+      setStatsLoading(true);
+      try {
+        let url = '/api/meals/stats';
+        const params = new URLSearchParams();
+        
+        if (statsDateRange === 'current-month') {
+          const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+          const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+          params.append('startDate', startDate);
+          params.append('endDate', endDate);
+        } else if (statsDateRange === 'custom' && customStartDate && customEndDate) {
+          params.append('startDate', format(customStartDate, 'yyyy-MM-dd'));
+          params.append('endDate', format(customEndDate, 'yyyy-MM-dd'));
+        }
+        // For 'all-time', no params needed
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setStatsTotals(data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats totals:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchStatsTotals();
+  }, [statsDateRange, currentMonth, customStartDate, customEndDate]);
 
   // Get nutrition data for a specific date
   const getNutritionForDate = (date: Date) => {
@@ -197,62 +248,110 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Quick Stats</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Quick Stats</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={statsDateRange} onValueChange={(value: 'all-time' | 'current-month' | 'custom') => setStatsDateRange(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-time">All Time</SelectItem>
+                  <SelectItem value="current-month">Current Month</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {statsDateRange === 'custom' && (
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <Calendar
+                  mode="single"
+                  selected={customStartDate}
+                  onSelect={setCustomStartDate}
+                  className="rounded-md border"
+                />
+              </div>
+              <span className="text-sm text-muted-foreground">to</span>
+              <div className="flex items-center gap-2">
+                <Calendar
+                  mode="single"
+                  selected={customEndDate}
+                  onSelect={setCustomEndDate}
+                  className="rounded-md border"
+                  disabled={(date) => customStartDate ? date < customStartDate : false}
+                />
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">
-                {dailyTotals.length > 0
-                  ? Math.round(dailyTotals.reduce((sum, day) => sum + day.total_calories, 0) / dailyTotals.length)
-                  : 0
-                }
-              </p>
-              <p className="text-sm text-muted-foreground">Avg Calories/Day</p>
+          {statsLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center space-x-2 text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                <span>Loading stats...</span>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {dailyTotals.length > 0
-                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / dailyTotals.length).toFixed(1)
-                  : '0.0'
-                }g
-              </p>
-              <p className="text-sm text-muted-foreground">Avg Protein/Day</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {dailyTotals.length > 0
-                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0) / dailyTotals.length).toFixed(1)
-                  : '0.0'
-                }g
-              </p>
-              <p className="text-sm text-muted-foreground">Avg Carbs/Day</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">
-                {dailyTotals.length > 0
-                  ? (dailyTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0) / dailyTotals.length).toFixed(1)
-                  : '0.0'
-                }g
-              </p>
-              <p className="text-sm text-muted-foreground">Avg Fat/Day</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="text-center">
-              <p className="text-xl font-bold">
-                {dailyTotals.reduce((sum, day) => sum + day.meal_count, 0)}
-              </p>
-              <p className="text-sm text-muted-foreground">Total Meals</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xl font-bold">
-                {dailyTotals.length}
-              </p>
-              <p className="text-sm text-muted-foreground">Days Tracked</p>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">
+                    {statsTotals.length > 0
+                      ? Math.round(statsTotals.reduce((sum, day) => sum + day.total_calories, 0) / statsTotals.length)
+                      : 0
+                    }
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avg Calories/Day</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {statsTotals.length > 0
+                      ? (statsTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / statsTotals.length).toFixed(1)
+                      : '0.0'
+                    }g
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avg Protein/Day</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {statsTotals.length > 0
+                      ? (statsTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0) / statsTotals.length).toFixed(1)
+                      : '0.0'
+                    }g
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avg Carbs/Day</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-600">
+                    {statsTotals.length > 0
+                      ? (statsTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0) / statsTotals.length).toFixed(1)
+                      : '0.0'
+                    }g
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avg Fat/Day</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold">
+                    {statsTotals.reduce((sum, day) => sum + day.meal_count, 0)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Total Meals</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold">
+                    {statsTotals.length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Days Tracked</p>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

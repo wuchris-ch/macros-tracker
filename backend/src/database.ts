@@ -107,6 +107,45 @@ export class Database {
     });
   }
 
+  // Get all-time daily totals with optional date range filtering
+  getAllTimeDailyTotals(startDate?: string, endDate?: string): Promise<DailyTotal[]> {
+    return new Promise((resolve, reject) => {
+      let query = `
+        SELECT
+          date,
+          SUM(calories) as total_calories,
+          SUM(protein) as total_protein,
+          SUM(carbs) as total_carbs,
+          SUM(fat) as total_fat,
+          COUNT(*) as meal_count
+        FROM meals
+      `;
+      
+      const params: string[] = [];
+      
+      if (startDate && endDate) {
+        query += ' WHERE date BETWEEN ? AND ?';
+        params.push(startDate, endDate);
+      } else if (startDate) {
+        query += ' WHERE date >= ?';
+        params.push(startDate);
+      } else if (endDate) {
+        query += ' WHERE date <= ?';
+        params.push(endDate);
+      }
+      
+      query += ' GROUP BY date ORDER BY date ASC';
+      
+      this.db.all(query, params, (err, rows: DailyTotal[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
   // Add a new meal
   addMeal(meal: Omit<Meal, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
     return new Promise((resolve, reject) => {
