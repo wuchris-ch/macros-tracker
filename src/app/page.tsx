@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CalendarView } from '@/components/CalendarView';
 import { DayView } from '@/components/DayView';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 
@@ -16,13 +17,16 @@ export default function Home() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Calorie Tracker</h1>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowSettings(true)}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
