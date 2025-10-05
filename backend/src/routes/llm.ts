@@ -21,7 +21,7 @@ interface CalorieEstimationResponse {
 router.post('/estimate-calories', async (req, res) => {
   try {
     const { description, apiKey }: CalorieEstimationRequest = req.body;
-    const model = 'x-ai/grok-4-fast:free'; // Hardcoded to use grok-4-fast:free
+    const model = 'deepseek/deepseek-chat-v3.1:free'; // Hardcoded to use DeepSeek V3.1 (free)
 
     // Validate required fields
     if (!description || !apiKey) {
@@ -36,29 +36,29 @@ router.post('/estimate-calories', async (req, res) => {
     }
 
 
-    const prompt = `You are a nutrition expert. Estimate the total calories and macronutrients for the following food description.
-    
-Food description: "${description}"
+    const prompt = `You are a nutrition expert. Analyze this food and provide nutritional estimates.
 
-Please respond with ONLY a JSON object in this exact format:
+Food: "${description}"
+
+IMPORTANT: You must respond with ONLY valid JSON. No other text before or after.
+
+Required JSON format (use actual numbers, not placeholders):
 {
-  "calories": <number>,
-  "protein": <number in grams>,
-  "carbs": <number in grams>,
-  "fat": <number in grams>,
-  "confidence": "<high|medium|low>",
-  "reasoning": "<brief explanation of your estimate>"
+  "calories": 450,
+  "protein": 35.5,
+  "carbs": 42.0,
+  "fat": 15.2,
+  "confidence": "high",
+  "reasoning": "Based on typical portions"
 }
 
-Guidelines:
-- Provide your best estimate based on typical serving sizes
-- Include macronutrients in grams (protein, carbohydrates, fat)
-- Use "high" confidence for common foods with clear portions
-- Use "medium" confidence for foods with unclear portions
-- Use "low" confidence for very vague descriptions
-- Keep reasoning brief (1-2 sentences)
-- If multiple items are mentioned, provide the total values for all items combined
-- Round macronutrients to 1 decimal place`;
+Rules:
+1. ALL numbers must be actual estimates (never 0 unless truly zero calories)
+2. Protein, carbs, and fat are in grams
+3. Confidence must be exactly "high", "medium", or "low"
+4. For multiple items, sum all values
+5. Estimate based on standard serving sizes
+6. Return ONLY the JSON object, nothing else`;
 
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
@@ -70,8 +70,9 @@ Guidelines:
             content: prompt
           }
         ],
-        temperature: 0.3,
-        max_tokens: 200
+        temperature: 0.5,
+        max_tokens: 300,
+        response_format: { type: "json_object" }
       },
       {
         headers: {
@@ -162,7 +163,7 @@ Guidelines:
 // GET /api/llm/models - Get available models (for future use)
 router.get('/models', (req, res) => {
   const availableModels = [
-    { id: 'x-ai/grok-4-fast:free', name: 'Grok 4 Fast (Free)', description: 'xAI\'s latest multimodal model - Free tier' },
+    { id: 'deepseek/deepseek-chat-v3.1:free', name: 'DeepSeek V3.1 (Free)', description: 'DeepSeek\'s latest chat model - Free tier' },
     { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient OpenAI model' },
     { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Latest GPT-4 model' },
     { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', description: 'Fast Anthropic model' },

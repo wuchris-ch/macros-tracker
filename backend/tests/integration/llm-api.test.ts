@@ -34,7 +34,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-123',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -84,7 +84,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-456',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -126,7 +126,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-789',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -265,7 +265,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-malformed',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -294,7 +294,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-partial',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -343,7 +343,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-negative',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -382,7 +382,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-invalid-confidence',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'x-ai/grok-4-fast:free',
+            model: 'deepseek/deepseek-chat-v3.1:free',
             choices: [{
               index: 0,
               message: {
@@ -424,9 +424,9 @@ describe('LLM API Integration Tests', () => {
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBeGreaterThan(0);
       
-      const grokModel = response.body.find((model: { id: string; name: string }) => model.id === 'x-ai/grok-4-fast:free');
-      expect(grokModel).toBeDefined();
-      expect(grokModel.name).toBe('Grok 4 Fast (Free)');
+      const deepseekModel = response.body.find((model: { id: string; name: string }) => model.id === 'deepseek/deepseek-chat-v3.1:free');
+      expect(deepseekModel).toBeDefined();
+      expect(deepseekModel.name).toBe('DeepSeek V3.1 (Free)');
     });
   });
 });

@@ -253,7 +253,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   This app uses OpenRouter&apos;s unified API to access multiple AI models for calorie estimation.
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <strong>Current Model:</strong> Grok 4 Fast (Free)
+                  <strong>Current Model:</strong> DeepSeek V3.1 (Free)
                 </p>
               </div>
             </CardContent>
