@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -37,13 +37,21 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
 
-  // Fetch daily totals for the current month
+  // Fetch daily totals for the current month including visible dates from adjacent months
   useEffect(() => {
     const fetchDailyTotals = async () => {
       setLoading(true);
       try {
-        const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+        // Get the first day of the month and find the start of the week containing it
+        const monthStart = startOfMonth(currentMonth);
+        const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // 0 = Sunday
+        
+        // Get the last day of the month and find the end of the week containing it
+        const monthEnd = endOfMonth(currentMonth);
+        const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+        
+        const startDate = format(calendarStart, 'yyyy-MM-dd');
+        const endDate = format(calendarEnd, 'yyyy-MM-dd');
         
         const response = await fetch(
           `/api/meals/totals/${startDate}/${endDate}`
