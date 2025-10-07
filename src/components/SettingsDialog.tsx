@@ -11,7 +11,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Moon, Sun, Monitor } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Moon, Sun, Monitor, Download } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 
 interface SettingsDialogProps {
@@ -38,6 +39,8 @@ const DEFAULT_GOALS: UserGoals = {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
   const [goals, setGoals] = useState<UserGoals>(DEFAULT_GOALS);
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load goals from localStorage on mount
   useEffect(() => {
@@ -93,6 +96,34 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     handleSaveGoals();
   };
 
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/meals/export?format=${exportFormat}`);
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calorie-tracker-export-${new Date().toISOString().split('T')[0]}.${exportFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      alert('Data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleClearData = () => {
     // First confirmation
@@ -288,17 +319,47 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               <CardTitle className="text-lg">Data Management</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   All your meal data is stored locally in your browser and on the local database.
                 </p>
-                <Button
-                  variant="destructive"
-                  onClick={handleClearData}
-                  className="w-full"
-                >
-                  Clear All Data
-                </Button>
+                
+                {/* Export Section */}
+                <div className="space-y-3">
+                  <Label htmlFor="export-format">Export Format</Label>
+                  <Select value={exportFormat} onValueChange={(value: 'json' | 'csv') => setExportFormat(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select export format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="json">JSON (Complete data)</SelectItem>
+                      <SelectItem value="csv">CSV (Spreadsheet format)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleExportData}
+                    disabled={isExporting}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? 'Exporting...' : 'Export All Data'}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Export includes all meals, daily totals, and metadata. JSON format preserves all data structure, CSV is suitable for spreadsheets.
+                  </p>
+                </div>
+
+                {/* Clear Data Section */}
+                <div className="space-y-2 pt-2 border-t">
+                  <Button
+                    variant="destructive"
+                    onClick={handleClearData}
+                    className="w-full"
+                  >
+                    Clear All Data
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

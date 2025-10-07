@@ -249,6 +249,45 @@ export class Database {
     });
   }
 
+  // Get all meals for export
+  getAllMeals(): Promise<Meal[]> {
+    return new Promise((resolve, reject) => {
+      const query = 'SELECT * FROM meals ORDER BY date ASC, created_at ASC';
+      this.db.all(query, [], (err, rows: Meal[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  // Get all daily totals for export
+  getAllDailyTotals(): Promise<DailyTotal[]> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT
+          date,
+          SUM(calories) as total_calories,
+          SUM(protein) as total_protein,
+          SUM(carbs) as total_carbs,
+          SUM(fat) as total_fat,
+          COUNT(*) as meal_count
+        FROM meals
+        GROUP BY date
+        ORDER BY date ASC
+      `;
+      this.db.all(query, [], (err, rows: DailyTotal[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
   // Close database connection
   close(): void {
     this.db.close((err) => {

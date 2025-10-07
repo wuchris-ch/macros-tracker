@@ -42,7 +42,7 @@ describe('DayView', () => {
     await waitFor(() => {
       expect(screen.getByText('Daily Summary')).toBeInTheDocument();
       expect(screen.getByText('Daily Progress')).toBeInTheDocument();
-      expect(screen.getByText('Meals')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Meals' })).toBeInTheDocument();
     });
   });
 
