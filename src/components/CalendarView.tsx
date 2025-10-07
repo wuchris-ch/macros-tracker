@@ -206,7 +206,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
     const heatmapColor = getHeatmapColor(calories);
     
     return (
-      <div className={`w-full h-full flex flex-col items-center justify-center p-2 min-h-[80px] ${heatmapColor} transition-colors`}>
+      <div className={`w-[96px] h-[100px] flex flex-col items-center justify-center p-2 ${heatmapColor} transition-colors`}>
         <span className={`text-base font-medium mb-1 ${isToday ? 'font-bold text-primary' : ''}`}>
           {format(date, 'd')}
         </span>
@@ -224,7 +224,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
             </div>
           </div>
         ) : (
-          <div className="text-xs text-muted-foreground/50">
+          <div className="text-xs text-muted-foreground/50 h-[32px] flex items-center">
             No data
           </div>
         )}
@@ -282,7 +282,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                 selected={undefined}
                 onSelect={handleDateSelect}
                 month={currentMonth}
-                className="rounded-lg border shadow-sm [--cell-size:theme(spacing.20)] mx-auto"
+                className="rounded-lg border shadow-sm [--cell-size:theme(spacing.24)] mx-auto"
                 classNames={{
                   root: "w-fit mx-auto",
                   months: "flex justify-center",
@@ -290,7 +290,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                   nav: "hidden", // Hide default navigation
                   table: "w-full border-collapse mx-auto",
                   week: "flex w-full",
-                  day: "relative w-full h-full p-0 text-center group/day aspect-square select-none border border-border/20",
+                  day: "relative w-[96px] h-[100px] p-0 text-center group/day select-none border border-border/20",
                   today: "bg-primary/5 border-primary/30",
                   outside: "text-muted-foreground/30",
                 }}
@@ -298,7 +298,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                   DayButton: ({ day, modifiers, ...props }) => (
                     <button
                       {...props}
-                      className="w-full h-full hover:bg-accent/50 transition-colors duration-200 rounded-none border-0 p-0"
+                      className="w-[96px] h-[100px] hover:bg-accent/50 transition-colors duration-200 rounded-none border-0 p-0"
                     >
                       {renderDay(day.date)}
                     </button>
@@ -343,154 +343,236 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Quick Stats</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={statsDateRange} onValueChange={(value: 'all-time' | 'current-month' | 'custom') => setStatsDateRange(value)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select range" />
+      {/* Quick Stats and Trends - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Stats Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Quick Stats</CardTitle>
+              <div className="flex items-center gap-2">
+                <Select value={statsDateRange} onValueChange={(value: 'all-time' | 'current-month' | 'custom') => setStatsDateRange(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all-time">All Time</SelectItem>
+                    <SelectItem value="current-month">Current Month</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {statsDateRange === 'custom' && (
+              <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <Calendar
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={setCustomStartDate}
+                    className="rounded-md border"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">to</span>
+                <div className="flex items-center gap-2">
+                  <Calendar
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={setCustomEndDate}
+                    className="rounded-md border"
+                    disabled={(date) => customStartDate ? date < customStartDate : false}
+                  />
+                </div>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center space-x-2 text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span>Loading stats...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Main Metrics Row */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      {statsTotals.length > 0
+                        ? Math.round(statsTotals.reduce((sum, day) => sum + day.total_calories, 0) / statsTotals.length)
+                        : 0
+                      }
+                    </p>
+                    <p className="text-xs text-muted-foreground">Avg Calories</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">
+                      {statsTotals.length > 0
+                        ? (statsTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / statsTotals.length).toFixed(1)
+                        : '0.0'
+                      }g
+                    </p>
+                    <p className="text-xs text-muted-foreground">Avg Protein</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">
+                      {statsTotals.length > 0
+                        ? (statsTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0) / statsTotals.length).toFixed(1)
+                        : '0.0'
+                      }g
+                    </p>
+                    <p className="text-xs text-muted-foreground">Avg Carbs</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">
+                      {statsTotals.length > 0
+                        ? (statsTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0) / statsTotals.length).toFixed(1)
+                        : '0.0'
+                      }g
+                    </p>
+                    <p className="text-xs text-muted-foreground">Avg Fat</p>
+                  </div>
+                </div>
+
+                {/* Additional Metrics */}
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-primary">
+                      {statsTotals.reduce((sum, day) => sum + day.meal_count, 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Total Meals</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-primary">
+                      {statsTotals.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Days Tracked</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-primary">
+                      {statsTotals.length > 0
+                        ? (statsTotals.reduce((sum, day) => sum + day.meal_count, 0) / statsTotals.length).toFixed(1)
+                        : '0.0'
+                      }
+                    </p>
+                    <p className="text-xs text-muted-foreground">Avg Meals/Day</p>
+                  </div>
+                </div>
+
+                {/* Progress Indicators */}
+                {statsTotals.length > 0 && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Consistency</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          statsTotals.length >= 7 ? 'bg-green-500' : 
+                          statsTotals.length >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></div>
+                        <span className="font-medium">
+                          {statsTotals.length >= 7 ? 'Excellent' : 
+                           statsTotals.length >= 3 ? 'Good' : 'Getting Started'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Calorie Range</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          (() => {
+                            const avgCalories = statsTotals.reduce((sum, day) => sum + day.total_calories, 0) / statsTotals.length;
+                            if (avgCalories >= 1500 && avgCalories <= 2500) return 'bg-green-500';
+                            if (avgCalories >= 1200 && avgCalories <= 3000) return 'bg-yellow-500';
+                            return 'bg-red-500';
+                          })()
+                        }`}></div>
+                        <span className="font-medium">
+                          {(() => {
+                            const avgCalories = statsTotals.reduce((sum, day) => sum + day.total_calories, 0) / statsTotals.length;
+                            if (avgCalories >= 1500 && avgCalories <= 2500) return 'Healthy';
+                            if (avgCalories >= 1200 && avgCalories <= 3000) return 'Moderate';
+                            return 'Review Needed';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Protein Quality</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          (() => {
+                            const avgProtein = statsTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / statsTotals.length;
+                            if (avgProtein >= 100) return 'bg-green-500';
+                            if (avgProtein >= 70) return 'bg-yellow-500';
+                            return 'bg-red-500';
+                          })()
+                        }`}></div>
+                        <span className="font-medium">
+                          {(() => {
+                            const avgProtein = statsTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / statsTotals.length;
+                            if (avgProtein >= 100) return 'High';
+                            if (avgProtein >= 70) return 'Moderate';
+                            return 'Low';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Tracking Streak</span>
+                      <span className="font-medium text-primary">
+                        {statsTotals.length} day{statsTotals.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Trends Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Nutrition Trends</CardTitle>
+              <Select value={trendPeriod} onValueChange={(value: 'week' | 'month') => setTrendPeriod(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all-time">All Time</SelectItem>
-                  <SelectItem value="current-month">Current Month</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
+                  <SelectItem value="week">Last 7 Days</SelectItem>
+                  <SelectItem value="month">Last 30 Days</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          {statsDateRange === 'custom' && (
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                <Calendar
-                  mode="single"
-                  selected={customStartDate}
-                  onSelect={setCustomStartDate}
-                  className="rounded-md border"
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="calories" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="calories">Calories</TabsTrigger>
+                <TabsTrigger value="protein">Protein</TabsTrigger>
+              </TabsList>
+              <TabsContent value="calories" className="mt-4">
+                <TrendChart
+                  data={trendData}
+                  metric="calories"
+                  period={trendPeriod}
                 />
-              </div>
-              <span className="text-sm text-muted-foreground">to</span>
-              <div className="flex items-center gap-2">
-                <Calendar
-                  mode="single"
-                  selected={customEndDate}
-                  onSelect={setCustomEndDate}
-                  className="rounded-md border"
-                  disabled={(date) => customStartDate ? date < customStartDate : false}
+              </TabsContent>
+              <TabsContent value="protein" className="mt-4">
+                <TrendChart
+                  data={trendData}
+                  metric="protein"
+                  period={trendPeriod}
                 />
-              </div>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {statsLoading ? (
-            <div className="text-center py-8">
-              <div className="inline-flex items-center space-x-2 text-muted-foreground">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading stats...</span>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">
-                    {statsTotals.length > 0
-                      ? Math.round(statsTotals.reduce((sum, day) => sum + day.total_calories, 0) / statsTotals.length)
-                      : 0
-                    }
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg Calories/Day</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">
-                    {statsTotals.length > 0
-                      ? (statsTotals.reduce((sum, day) => sum + (day.total_protein || 0), 0) / statsTotals.length).toFixed(1)
-                      : '0.0'
-                    }g
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg Protein/Day</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">
-                    {statsTotals.length > 0
-                      ? (statsTotals.reduce((sum, day) => sum + (day.total_carbs || 0), 0) / statsTotals.length).toFixed(1)
-                      : '0.0'
-                    }g
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg Carbs/Day</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">
-                    {statsTotals.length > 0
-                      ? (statsTotals.reduce((sum, day) => sum + (day.total_fat || 0), 0) / statsTotals.length).toFixed(1)
-                      : '0.0'
-                    }g
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg Fat/Day</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="text-center">
-                  <p className="text-xl font-bold">
-                    {statsTotals.reduce((sum, day) => sum + day.meal_count, 0)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Total Meals</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold">
-                    {statsTotals.length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Days Tracked</p>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Trends Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Nutrition Trends</CardTitle>
-            <Select value={trendPeriod} onValueChange={(value: 'week' | 'month') => setTrendPeriod(value)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Last 7 Days</SelectItem>
-                <SelectItem value="month">Last 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="calories" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="calories">Calories</TabsTrigger>
-              <TabsTrigger value="protein">Protein</TabsTrigger>
-            </TabsList>
-            <TabsContent value="calories" className="mt-4">
-              <TrendChart
-                data={trendData}
-                metric="calories"
-                period={trendPeriod}
-              />
-            </TabsContent>
-            <TabsContent value="protein" className="mt-4">
-              <TrendChart
-                data={trendData}
-                metric="protein"
-                period={trendPeriod}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

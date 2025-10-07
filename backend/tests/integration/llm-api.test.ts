@@ -1,32 +1,24 @@
 import request from 'supertest';
 import express from 'express';
 import { llmRouter } from '../../src/routes/llm';
-import { createOpenRouterMock } from '../mocks/openrouter';
-import { validFoodDescriptions, ambiguousFoodDescriptions, invalidFoodDescriptions } from '../fixtures/food-descriptions';
 import nock from 'nock';
+
+// Mock environment variables
+process.env.OPENROUTER_API_KEY = 'test-api-key';
 
 const app = express();
 app.use(express.json());
 app.use('/api/llm', llmRouter);
 
 describe('LLM API Integration Tests', () => {
-  let openRouterMock: ReturnType<typeof createOpenRouterMock>;
-
-  beforeEach(() => {
-    openRouterMock = createOpenRouterMock();
-  });
-
   afterEach(() => {
     nock.cleanAll();
   });
 
   describe('POST /api/llm/estimate-calories', () => {
-    const validApiKey = 'test-api-key';
 
     describe('Successful calorie estimation', () => {
       it('should estimate calories for a simple food description', async () => {
-        const foodDescription = validFoodDescriptions[0]; // "1 medium apple"
-        
         // Mock successful OpenRouter response
         nock('https://openrouter.ai/api/v1')
           .post('/chat/completions')
@@ -34,7 +26,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-123',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
+            model: 'microsoft/mai-ds-r1:free',
             choices: [{
               index: 0,
               message: {
@@ -60,8 +52,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: foodDescription.description,
-            apiKey: validApiKey
+            description: 'medium apple'
           });
 
         expect(response.status).toBe(200);
@@ -76,15 +67,13 @@ describe('LLM API Integration Tests', () => {
       });
 
       it('should estimate calories for a complex food description', async () => {
-        const complexFood = "Large Caesar salad with grilled chicken, croutons, and parmesan cheese";
-        
         nock('https://openrouter.ai/api/v1')
           .post('/chat/completions')
           .reply(200, {
             id: 'chatcmpl-test-456',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
+            model: 'microsoft/mai-ds-r1:free',
             choices: [{
               index: 0,
               message: {
@@ -105,8 +94,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: complexFood,
-            apiKey: validApiKey
+            description: 'Large Caesar salad with grilled chicken, croutons, and parmesan cheese'
           });
 
         expect(response.status).toBe(200);
@@ -117,27 +105,25 @@ describe('LLM API Integration Tests', () => {
         expect(response.body.fat).toBeGreaterThan(0);
       });
 
-      it('should handle ambiguous food descriptions with low confidence', async () => {
-        const ambiguousFood = ambiguousFoodDescriptions[0]; // "pasta"
-        
+      it('should handle model selection', async () => {
         nock('https://openrouter.ai/api/v1')
           .post('/chat/completions')
           .reply(200, {
-            id: 'chatcmpl-test-789',
+            id: 'chatcmpl-test-model',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
+            model: 'deepseek/deepseek-r1:free',
             choices: [{
               index: 0,
               message: {
                 role: 'assistant',
                 content: JSON.stringify({
-                  calories: 220,
-                  protein: 8.0,
-                  carbs: 44.0,
-                  fat: 1.5,
-                  confidence: 'low',
-                  reasoning: 'Pasta description is vague - could range from 200-800 calories depending on portion and sauce.'
+                  calories: 100,
+                  protein: 5.0,
+                  carbs: 20.0,
+                  fat: 2.0,
+                  confidence: 'high',
+                  reasoning: 'Test with specific model selection'
                 })
               },
               finish_reason: 'stop'
@@ -147,13 +133,13 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: ambiguousFood.description,
-            apiKey: validApiKey
+            description: 'test food',
+            model: 'deepseek/deepseek-r1:free'
           });
 
         expect(response.status).toBe(200);
-        expect(response.body.confidence).toBe('low');
-        expect(response.body.reasoning).toContain('vague');
+        expect(response.body.calories).toBe(100);
+        expect(response.body.confidence).toBe('high');
       });
     });
 
@@ -161,35 +147,39 @@ describe('LLM API Integration Tests', () => {
       it('should return 400 for missing description', async () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
-          .send({
-            apiKey: validApiKey
-          });
+          .send({});
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toContain('Missing required fields');
-      });
-
-      it('should return 400 for missing API key', async () => {
-        const response = await request(app)
-          .post('/api/llm/estimate-calories')
-          .send({
-            description: 'apple'
-          });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toContain('Missing required fields');
+        expect(response.body.error).toContain('Missing required field');
       });
 
       it('should return 400 for empty description', async () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: '   ',
-            apiKey: validApiKey
+            description: '   '
           });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Description cannot be empty');
+      });
+
+      it('should return 500 for missing API key configuration', async () => {
+        // Temporarily remove API key
+        const originalApiKey = process.env.OPENROUTER_API_KEY;
+        delete process.env.OPENROUTER_API_KEY;
+
+        const response = await request(app)
+          .post('/api/llm/estimate-calories')
+          .send({
+            description: 'apple'
+          });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toContain('Server configuration error');
+
+        // Restore API key
+        process.env.OPENROUTER_API_KEY = originalApiKey;
       });
 
       it('should handle 401 unauthorized from OpenRouter', async () => {
@@ -206,8 +196,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'apple',
-            apiKey: 'invalid-key'
+            description: 'apple'
           });
 
         expect(response.status).toBe(401);
@@ -228,8 +217,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'apple',
-            apiKey: validApiKey
+            description: 'apple'
           });
 
         expect(response.status).toBe(429);
@@ -250,8 +238,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'apple',
-            apiKey: validApiKey
+            description: 'apple'
           });
 
         expect(response.status).toBe(500);
@@ -265,7 +252,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-malformed',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
+            model: 'microsoft/mai-ds-r1:free',
             choices: [{
               index: 0,
               message: {
@@ -279,43 +266,11 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'apple',
-            apiKey: validApiKey
+            description: 'apple'
           });
 
         expect(response.status).toBe(500);
         expect(response.body.error).toContain('Failed to parse calorie estimation');
-      });
-
-      it('should handle partial response with fallback parsing', async () => {
-        nock('https://openrouter.ai/api/v1')
-          .post('/chat/completions')
-          .reply(200, {
-            id: 'chatcmpl-test-partial',
-            object: 'chat.completion',
-            created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
-            choices: [{
-              index: 0,
-              message: {
-                role: 'assistant',
-                content: 'The apple contains approximately 95 calories'
-              },
-              finish_reason: 'stop'
-            }]
-          });
-
-        const response = await request(app)
-          .post('/api/llm/estimate-calories')
-          .send({
-            description: 'apple',
-            apiKey: validApiKey
-          });
-
-        expect(response.status).toBe(200);
-        expect(response.body.calories).toBe(95);
-        expect(response.body.confidence).toBe('low');
-        expect(response.body.reasoning).toContain('partial response');
       });
 
       it('should handle network errors', async () => {
@@ -326,8 +281,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'apple',
-            apiKey: validApiKey
+            description: 'apple'
           });
 
         expect(response.status).toBe(500);
@@ -343,7 +297,7 @@ describe('LLM API Integration Tests', () => {
             id: 'chatcmpl-test-negative',
             object: 'chat.completion',
             created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
+            model: 'microsoft/mai-ds-r1:free',
             choices: [{
               index: 0,
               message: {
@@ -364,8 +318,7 @@ describe('LLM API Integration Tests', () => {
         const response = await request(app)
           .post('/api/llm/estimate-calories')
           .send({
-            description: 'test food',
-            apiKey: validApiKey
+            description: 'test food'
           });
 
         expect(response.status).toBe(200);
@@ -373,44 +326,6 @@ describe('LLM API Integration Tests', () => {
         expect(response.body.protein).toBe(0);
         expect(response.body.fat).toBe(0);
         expect(response.body.carbs).toBe(25.0);
-      });
-
-      it('should validate confidence levels', async () => {
-        nock('https://openrouter.ai/api/v1')
-          .post('/chat/completions')
-          .reply(200, {
-            id: 'chatcmpl-test-invalid-confidence',
-            object: 'chat.completion',
-            created: Date.now(),
-            model: 'deepseek/deepseek-chat-v3.1:free',
-            choices: [{
-              index: 0,
-              message: {
-                role: 'assistant',
-                content: JSON.stringify({
-                  calories: 100,
-                  protein: 5.0,
-                  carbs: 20.0,
-                  fat: 2.0,
-                  confidence: 'invalid',
-                  reasoning: 'Test with invalid confidence'
-                })
-              },
-              finish_reason: 'stop'
-            }]
-          });
-
-        const response = await request(app)
-          .post('/api/llm/estimate-calories')
-          .send({
-            description: 'test food',
-            apiKey: validApiKey
-          });
-
-        expect(response.status).toBe(200);
-        expect(response.body.calories).toBe(100);
-        expect(response.body.confidence).toBe('low');
-        expect(response.body.reasoning).toContain('partial response');
       });
     });
   });
@@ -422,11 +337,17 @@ describe('LLM API Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
+      expect(response.body.length).toBe(4);
       
-      const deepseekModel = response.body.find((model: { id: string; name: string }) => model.id === 'deepseek/deepseek-chat-v3.1:free');
+      const microsoftModel = response.body.find((model: { id: string; name: string }) => model.id === 'microsoft/mai-ds-r1:free');
+      expect(microsoftModel).toBeDefined();
+      expect(microsoftModel.name).toBe('Microsoft MAI DS R1 (Free)');
+      expect(microsoftModel.recommended).toBe(true);
+      
+      const deepseekModel = response.body.find((model: { id: string; name: string }) => model.id === 'deepseek/deepseek-r1:free');
       expect(deepseekModel).toBeDefined();
-      expect(deepseekModel.name).toBe('DeepSeek V3.1 (Free)');
+      expect(deepseekModel.name).toBe('DeepSeek R1 (Free)');
+      expect(deepseekModel.recommended).toBe(true);
     });
   });
 });

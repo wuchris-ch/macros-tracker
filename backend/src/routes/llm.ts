@@ -5,7 +5,7 @@ const router = express.Router();
 
 interface CalorieEstimationRequest {
   description: string;
-  apiKey: string;
+  model?: string;
 }
 
 interface CalorieEstimationResponse {
@@ -20,13 +20,31 @@ interface CalorieEstimationResponse {
 // POST /api/llm/estimate-calories - Estimate calories from food description
 router.post('/estimate-calories', async (req, res) => {
   try {
-    const { description, apiKey }: CalorieEstimationRequest = req.body;
-    const model = 'deepseek/deepseek-chat-v3.1:free'; // Hardcoded to use DeepSeek V3.1 (free)
+    const { description, model: requestedModel }: CalorieEstimationRequest = req.body;
+    
+    // Available models with their characteristics
+    const availableModels = {
+      'microsoft/mai-ds-r1:free': 'Microsoft MAI DS R1 (Free) - Best reasoning',
+      'deepseek/deepseek-r1:free': 'DeepSeek R1 (Free) - Fast reasoning',
+      'tngtech/deepseek-r1t2-chimera:free': 'TNG DeepSeek R1T2 Chimera (Free) - Balanced',
+      'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo - Reliable fallback'
+    };
+    
+    const model = requestedModel && availableModels[requestedModel as keyof typeof availableModels] 
+      ? requestedModel 
+      : 'microsoft/mai-ds-r1:free'; // Default to best model
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
     // Validate required fields
-    if (!description || !apiKey) {
+    if (!description) {
       return res.status(400).json({
-        error: 'Missing required fields: description and apiKey are required'
+        error: 'Missing required field: description is required'
+      });
+    }
+
+    if (!apiKey) {
+      return res.status(500).json({
+        error: 'Server configuration error: API key not configured'
       });
     }
 
@@ -143,7 +161,7 @@ Rules:
       
       if (error.response?.status === 401) {
         return res.status(401).json({
-          error: 'Invalid API key for Fuelix proxy. Please check your API key format.',
+          error: 'Invalid API key for OpenRouter. Please check your API key format.',
           details: error.response.data
         });
       } else if (error.response?.status === 429) {
@@ -160,15 +178,33 @@ Rules:
   }
 });
 
-// GET /api/llm/models - Get available models (for future use)
+// GET /api/llm/models - Get available models
 router.get('/models', (req, res) => {
   const availableModels = [
-    { id: 'deepseek/deepseek-chat-v3.1:free', name: 'DeepSeek V3.1 (Free)', description: 'DeepSeek\'s latest chat model - Free tier' },
-    { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient OpenAI model' },
-    { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Latest GPT-4 model' },
-    { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', description: 'Fast Anthropic model' },
-    { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', description: 'Balanced Anthropic model' },
-    { id: 'google/gemini-pro', name: 'Gemini Pro', description: 'Google AI model' }
+    { 
+      id: 'microsoft/mai-ds-r1:free', 
+      name: 'Microsoft MAI DS R1 (Free)', 
+      description: 'Best reasoning performance - Microsoft\'s enhanced DeepSeek R1',
+      recommended: true
+    },
+    { 
+      id: 'deepseek/deepseek-r1:free', 
+      name: 'DeepSeek R1 (Free)', 
+      description: 'Fast reasoning - Open-source reasoning model',
+      recommended: true
+    },
+    { 
+      id: 'tngtech/deepseek-r1t2-chimera:free', 
+      name: 'TNG DeepSeek R1T2 Chimera (Free)', 
+      description: 'Balanced performance - Merged reasoning model',
+      recommended: false
+    },
+    { 
+      id: 'openai/gpt-3.5-turbo', 
+      name: 'GPT-3.5 Turbo', 
+      description: 'Reliable fallback - OpenAI\'s proven model',
+      recommended: false
+    }
   ];
   
   res.json(availableModels);

@@ -93,6 +93,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     handleSaveGoals();
   };
 
+
   const handleClearData = () => {
     // First confirmation
     if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
@@ -269,7 +270,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   This app uses OpenRouter&apos;s unified API to access multiple AI models for calorie estimation.
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <strong>Current Model:</strong> DeepSeek V3.1 (Free)
+                  <strong>Default Model:</strong> Microsoft MAI DS R1 (Free)
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <strong>Status:</strong> API key configured on server
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <strong>Model Selection:</strong> Available in AI Estimation tab
                 </p>
               </div>
             </CardContent>

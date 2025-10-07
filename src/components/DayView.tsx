@@ -179,75 +179,184 @@ export function DayView({ date, onBack }: DayViewProps) {
         </Button>
       </div>
 
-      {/* Daily Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-primary">{totalCalories}</p>
-              <p className="text-sm text-muted-foreground">Calories</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">{totalProtein.toFixed(1)}g</p>
-              <p className="text-sm text-muted-foreground">Protein</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">{totalCarbs.toFixed(1)}g</p>
-              <p className="text-sm text-muted-foreground">Carbs</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-orange-600">{totalFat.toFixed(1)}g</p>
-              <p className="text-sm text-muted-foreground">Fat</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Daily Summary and Progress - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Main Macronutrients */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{totalCalories}</p>
+                  <p className="text-xs text-muted-foreground">Calories</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{totalProtein.toFixed(1)}g</p>
+                  <p className="text-xs text-muted-foreground">Protein</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{totalCarbs.toFixed(1)}g</p>
+                  <p className="text-xs text-muted-foreground">Carbs</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-600">{totalFat.toFixed(1)}g</p>
+                  <p className="text-xs text-muted-foreground">Fat</p>
+                </div>
+              </div>
 
-      {/* Progress Bars */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily Progress</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ProgressBar
-            current={totalCalories}
-            goal={userGoals.maxCalories}
-            minGoal={userGoals.minCalories}
-            label="Calories"
-            unit=""
-          />
-          {userGoals.proteinGrams > 0 && (
+              {/* Additional Metrics */}
+              <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-primary">{meals.length}</p>
+                  <p className="text-xs text-muted-foreground">Meals</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-primary">
+                    {totalMacroGrams > 0 ? ((totalProtein / totalMacroGrams) * 100).toFixed(0) : 0}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">Protein %</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-primary">
+                    {totalCalories > 0 ? (totalProtein * 4 + totalCarbs * 4 + totalFat * 9).toFixed(0) : 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Calc. Calories</p>
+                </div>
+              </div>
+
+              {/* Status Indicators */}
+              <div className="space-y-3 pt-3 border-t">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Calorie Status</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      totalCalories < userGoals.minCalories ? 'bg-red-500' :
+                      totalCalories > userGoals.maxCalories ? 'bg-red-500' : 'bg-green-500'
+                    }`}></div>
+                    <span className="font-medium">
+                      {totalCalories < userGoals.minCalories ? 'Below Goal' :
+                       totalCalories > userGoals.maxCalories ? 'Over Goal' : 'Within Range'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Protein Status</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      totalProtein < userGoals.proteinGrams * 0.8 ? 'bg-red-500' :
+                      totalProtein > userGoals.proteinGrams * 1.2 ? 'bg-red-500' : 'bg-green-500'
+                    }`}></div>
+                    <span className="font-medium">
+                      {totalProtein < userGoals.proteinGrams * 0.8 ? 'Low' :
+                       totalProtein > userGoals.proteinGrams * 1.2 ? 'High' : 'Good'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Meal Frequency</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      meals.length === 0 ? 'bg-red-500' :
+                      meals.length === 1 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}></div>
+                    <span className="font-medium">
+                      {meals.length === 0 ? 'No Meals' :
+                       meals.length === 1 ? 'Single Meal' :
+                       meals.length <= 3 ? 'Good' : 'Excellent'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Macro Balance</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      (() => {
+                        const proteinPercent = totalMacroGrams > 0 ? (totalProtein / totalMacroGrams) * 100 : 0;
+                        if (proteinPercent >= 25 && proteinPercent <= 35) return 'bg-green-500';
+                        if (proteinPercent >= 20 && proteinPercent <= 40) return 'bg-yellow-500';
+                        return 'bg-red-500';
+                      })()
+                    }`}></div>
+                    <span className="font-medium">
+                      {(() => {
+                        const proteinPercent = totalMacroGrams > 0 ? (totalProtein / totalMacroGrams) * 100 : 0;
+                        if (proteinPercent >= 25 && proteinPercent <= 35) return 'Balanced';
+                        if (proteinPercent >= 20 && proteinPercent <= 40) return 'Moderate';
+                        return 'Unbalanced';
+                      })()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Calorie Accuracy</span>
+                  <span className="font-medium text-primary">
+                    {(() => {
+                      const calculatedCalories = totalProtein * 4 + totalCarbs * 4 + totalFat * 9;
+                      const difference = Math.abs(totalCalories - calculatedCalories);
+                      if (difference <= 50) return 'Excellent';
+                      if (difference <= 100) return 'Good';
+                      return 'Check Data';
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Daily Target</span>
+                  <span className="font-medium text-primary">
+                    {((totalCalories / userGoals.maxCalories) * 100).toFixed(0)}% Complete
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Progress Bars */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Progress</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <ProgressBar
-              current={totalProtein}
-              goal={userGoals.proteinGrams}
-              label="Protein"
-              color="#2563eb"
-              unit="g"
+              current={totalCalories}
+              goal={userGoals.maxCalories}
+              minGoal={userGoals.minCalories}
+              label="Calories"
+              unit=""
             />
-          )}
-          {userGoals.carbsGrams > 0 && (
-            <ProgressBar
-              current={totalCarbs}
-              goal={userGoals.carbsGrams}
-              label="Carbs"
-              color="#16a34a"
-              unit="g"
-            />
-          )}
-          {userGoals.fatGrams > 0 && (
-            <ProgressBar
-              current={totalFat}
-              goal={userGoals.fatGrams}
-              label="Fat"
-              color="#ea580c"
-              unit="g"
-            />
-          )}
-        </CardContent>
-      </Card>
+            {userGoals.proteinGrams > 0 && (
+              <ProgressBar
+                current={totalProtein}
+                goal={userGoals.proteinGrams}
+                label="Protein"
+                color="#2563eb"
+                unit="g"
+              />
+            )}
+            {userGoals.carbsGrams > 0 && (
+              <ProgressBar
+                current={totalCarbs}
+                goal={userGoals.carbsGrams}
+                label="Carbs"
+                color="#16a34a"
+                unit="g"
+              />
+            )}
+            {userGoals.fatGrams > 0 && (
+              <ProgressBar
+                current={totalFat}
+                goal={userGoals.fatGrams}
+                label="Fat"
+                color="#ea580c"
+                unit="g"
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Macronutrient Chart */}
       {totalMacroGrams > 0 && (
@@ -285,24 +394,24 @@ export function DayView({ date, onBack }: DayViewProps) {
           <div className="space-y-3">
             {meals.map((meal, index) => (
               <Card key={meal.id}>
-                <CardContent className="py-4">
+                <CardContent className="py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium">{index + 1}</span>
+                        <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium">{index + 1}</span>
                         </div>
-                        <div>
-                          <h3 className="font-medium">{meal.name}</h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium break-words">{meal.name}</h3>
                           {meal.description && (
-                            <p className="text-sm text-muted-foreground">{meal.description}</p>
+                            <p className="text-xs text-muted-foreground break-words">{meal.description}</p>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                       <div className="text-right">
-                        <p className="font-semibold">{meal.calories} cal</p>
+                        <p className="font-semibold text-sm">{meal.calories} cal</p>
                         {(meal.protein || meal.carbs || meal.fat) && (
                           <p className="text-xs text-muted-foreground">
                             {meal.protein ? `${meal.protein.toFixed(1)}p ` : ''}
@@ -317,17 +426,19 @@ export function DayView({ date, onBack }: DayViewProps) {
                       <div className="flex space-x-1">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => handleEditMeal(meal)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => handleDeleteMeal(meal.id)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>

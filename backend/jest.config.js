@@ -25,6 +25,9 @@ module.exports = {
   testTimeout: 10000,
   clearMocks: true,
   restoreMocks: true,
+  // Suppress console output during tests unless there are failures
+  silent: true,
+  verbose: false,
   globals: {
     'ts-jest': {
       tsconfig: 'tsconfig.test.json'

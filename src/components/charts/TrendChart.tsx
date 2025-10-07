@@ -23,10 +23,6 @@ interface TooltipPayload {
 }
 
 export function TrendChart({ data, metric, period }: TrendChartProps) {
-  // Debug logging
-  console.log('TrendChart - metric:', metric);
-  console.log('TrendChart - data:', data);
-  console.log('TrendChart - data length:', data.length);
 
   // Handle empty data
   if (!data || data.length === 0) {

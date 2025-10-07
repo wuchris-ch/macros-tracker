@@ -53,17 +53,26 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [estimating, setEstimating] = useState(false);
   const [estimation, setEstimation] = useState<CalorieEstimation | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('microsoft/mai-ds-r1:free');
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
 
-  // Load saved API key from localStorage
+  // Load available models on mount
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('calorie-tracker-api-key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
+    const loadModels = async () => {
+      try {
+        const response = await fetch('/api/llm/models');
+        if (response.ok) {
+          const models = await response.json();
+          setAvailableModels(models);
+        }
+      } catch (error) {
+        console.error('Error loading models:', error);
+      }
+    };
+    loadModels();
   }, []);
 
   // Reset form when dialog opens/closes or meal changes
@@ -94,11 +103,6 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
       return;
     }
 
-    if (!apiKey.trim()) {
-      alert('Please configure your API key in Settings first');
-      return;
-    }
-
     setEstimating(true);
     setEstimation(null);
 
@@ -110,7 +114,7 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         },
         body: JSON.stringify({
           description: description.trim(),
-          apiKey: apiKey.trim(),
+          model: selectedModel,
         }),
       });
 
@@ -121,9 +125,6 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         setProtein(data.protein.toString());
         setCarbs(data.carbs.toString());
         setFat(data.fat.toString());
-        
-        // Save API key to localStorage for future use
-        localStorage.setItem('calorie-tracker-api-key', apiKey.trim());
       } else {
         const error = await response.json();
         alert(`Error estimating calories: ${error.error}`);
@@ -321,22 +322,33 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
               />
             </div>
 
-            {!apiKey && (
-              <div className="space-y-2">
-                <Label htmlFor="api-key">API Key</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your OpenRouter API key"
-                />
+            <div className="space-y-2">
+              <Label htmlFor="model-select">AI Model</Label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select AI model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{model.name}</span>
+                        {model.recommended && (
+                          <span className="text-xs bg-green-100 text-green-800 px-1 rounded">
+                            Recommended
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableModels.find(m => m.id === selectedModel) && (
                 <p className="text-xs text-muted-foreground">
-                  💡 Tip: Configure your API key in Settings to avoid entering it each time
+                  {availableModels.find(m => m.id === selectedModel)?.description}
                 </p>
-              </div>
-            )}
-
+              )}
+            </div>
 
             <Button
               onClick={handleEstimateCalories}
