@@ -67,13 +67,14 @@ backend/calorie_tracker.db
 qdrant_storage/
 
 # Screenshots and temporary files
-screenshots/
+# screenshots/
 *.png
 *.jpg
 *.jpeg
 *.gif
 *.svg
 !public/*.svg
+!screenshots/*.png
 
 # IDE and editor files
 .vscode/
