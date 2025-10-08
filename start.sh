@@ -36,8 +36,13 @@ FRONTEND_PID=$!
 
 echo ""
 echo "✅ Both servers are starting up!"
-echo "📱 Frontend: http://localhost:3001"
-echo "🔧 Backend:  http://localhost:3002"
+echo "📱 Frontend (local):    http://localhost:3001"
+echo "📱 Frontend (network):  http://192.168.1.67:3001"
+echo "🔧 Backend (local):     http://localhost:3002"
+echo "🔧 Backend (network):   http://192.168.1.67:3002"
+echo ""
+echo "🌐 Access from other devices on your network:"
+echo "   http://192.168.1.67:3001"
 echo ""
 echo "Press Ctrl+C to stop both servers"
 

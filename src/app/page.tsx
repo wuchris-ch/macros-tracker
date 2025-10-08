@@ -3,14 +3,18 @@
 import { useState } from 'react';
 import { CalendarView } from '@/components/CalendarView';
 import { DayView } from '@/components/DayView';
+import { MobileCalendarView } from '@/components/MobileCalendarView';
+import { MobileDayView } from '@/components/MobileDayView';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
+import { useIsMobile } from '@/lib/hooks/useMediaQuery';
 
 export default function Home() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,14 +36,27 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-6">
         {selectedDate ? (
-          <DayView
-            date={selectedDate}
-            onBack={() => setSelectedDate(null)}
-          />
+          isMobile ? (
+            <MobileDayView
+              date={selectedDate}
+              onBack={() => setSelectedDate(null)}
+            />
+          ) : (
+            <DayView
+              date={selectedDate}
+              onBack={() => setSelectedDate(null)}
+            />
+          )
         ) : (
-          <CalendarView
-            onDateSelect={setSelectedDate}
-          />
+          isMobile ? (
+            <MobileCalendarView
+              onDateSelect={setSelectedDate}
+            />
+          ) : (
+            <CalendarView
+              onDateSelect={setSelectedDate}
+            />
+          )
         )}
       </main>
 
