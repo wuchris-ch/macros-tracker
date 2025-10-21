@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { format, subMonths } from 'date-fns';
 import { CalendarView } from '@/components/CalendarView';
 
 // Mock fetch
@@ -146,5 +147,44 @@ describe('CalendarView', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('allows returning to the current month using the Today control', async () => {
+    const currentMonthLabel = format(new Date(), 'MMMM yyyy');
+    const previousMonthLabel = format(subMonths(new Date(), 1), 'MMMM yyyy');
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => mockDailyTotals,
+    });
+
+    render(<CalendarView onDateSelect={jest.fn()} />);
+
+    const todayButton = await screen.findByRole('button', { name: /go to current month/i });
+    expect(todayButton).toBeDisabled();
+
+    const navigation = todayButton.closest('div');
+    if (!navigation) {
+      throw new Error('Navigation container not found');
+    }
+    const navQueries = within(navigation);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: currentMonthLabel })).toBeInTheDocument();
+    });
+
+    fireEvent.click(navQueries.getByRole('button', { name: /previous month/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: previousMonthLabel })).toBeInTheDocument();
+    });
+    expect(navQueries.getByRole('button', { name: /go to current month/i })).not.toBeDisabled();
+
+    fireEvent.click(navQueries.getByRole('button', { name: /go to current month/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: currentMonthLabel })).toBeInTheDocument();
+    });
+    expect(navQueries.getByRole('button', { name: /go to current month/i })).toBeDisabled();
   });
 });

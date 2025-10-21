@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, Info } from 'lucide-react';
 
 interface Meal {
   id: number;
@@ -55,9 +55,17 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
   const [fat, setFat] = useState('');
   const [estimating, setEstimating] = useState(false);
   const [estimation, setEstimation] = useState<CalorieEstimation | null>(null);
+  const [estimationFeedback, setEstimationFeedback] = useState<{ tone: 'error' | 'info'; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedModel, setSelectedModel] = useState('microsoft/mai-ds-r1:free');
   const [availableModels, setAvailableModels] = useState<any[]>([]);
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    if (estimationFeedback) {
+      setEstimationFeedback(null);
+    }
+  };
 
   // Load available models on mount
   useEffect(() => {
@@ -94,17 +102,25 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         setFat('');
       }
       setEstimation(null);
+      setEstimationFeedback(null);
     }
   }, [open, meal]);
 
   const handleEstimateCalories = async () => {
     if (!description.trim()) {
-      alert('Please enter a food description');
+      setEstimationFeedback({
+        tone: 'error',
+        text: 'Describe what you ate so we can estimate the nutrition.',
+      });
       return;
     }
 
     setEstimating(true);
     setEstimation(null);
+    setEstimationFeedback({
+      tone: 'info',
+      text: 'Analyzing your description. This usually takes just a moment.',
+    });
 
     try {
       const response = await fetch('/api/llm/estimate-calories', {
@@ -125,13 +141,25 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
         setProtein(data.protein.toString());
         setCarbs(data.carbs.toString());
         setFat(data.fat.toString());
+         setEstimationFeedback({
+          tone: 'info',
+          text: 'We filled in the nutrition details based on your description. Tweak anything before saving.',
+        });
       } else {
         const error = await response.json();
-        alert(`Error estimating calories: ${error.error}`);
+        setEstimationFeedback({
+          tone: 'error',
+          text: error?.error
+            ? `We couldn't estimate calories: ${error.error}. Try again in a moment or adjust your description.`
+            : 'We could not estimate calories right now. Please try again in a moment.',
+        });
       }
     } catch (error) {
       console.error('Error estimating calories:', error);
-      alert('Failed to estimate calories. Please check your connection and try again.');
+      setEstimationFeedback({
+        tone: 'error',
+        text: 'We hit a connection issue while estimating. Check your connection and try again.',
+      });
     } finally {
       setEstimating(false);
     }
@@ -242,7 +270,7 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
               <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
                 placeholder="e.g., Grilled chicken salad with vegetables"
                 rows={3}
               />
@@ -316,11 +344,29 @@ export function MealDialog({ open, onOpenChange, date, meal, onSave }: MealDialo
               <Textarea
                 id="ai-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
                 placeholder="Describe what you ate... e.g., 'Large grilled chicken salad with mixed greens, cherry tomatoes, cucumber, and olive oil dressing'"
                 rows={4}
               />
             </div>
+
+            {estimationFeedback && (
+              <div
+                className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+                  estimationFeedback.tone === 'error'
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : 'border-blue-200 bg-blue-50 text-blue-700'
+                }`}
+                aria-live="polite"
+              >
+                {estimationFeedback.tone === 'error' ? (
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                )}
+                <span>{estimationFeedback.text}</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="model-select">AI Model</Label>
