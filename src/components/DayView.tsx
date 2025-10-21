@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, CheckCircle2, X } from 'lucide-react';
 import { MealDialog } from '@/components/MealDialog';
 import { MacronutrientChart } from '@/components/charts/MacronutrientChart';
 import { ProgressBar } from '@/components/charts/ProgressBar';
@@ -40,6 +40,8 @@ export function DayView({ date, onBack }: DayViewProps) {
   const [loading, setLoading] = useState(false);
   const [showMealDialog, setShowMealDialog] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userGoals, setUserGoals] = useState<UserGoals>({
     minCalories: 1800,
     maxCalories: 2200,
@@ -107,6 +109,14 @@ export function DayView({ date, onBack }: DayViewProps) {
     fetchMeals();
   }, [dateString]);
 
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleAddMeal = () => {
     setEditingMeal(null);
     setShowMealDialog(true);
@@ -136,15 +146,25 @@ export function DayView({ date, onBack }: DayViewProps) {
   };
 
   const handleMealSaved = (savedMeal: Meal) => {
-    if (editingMeal) {
-      // Update existing meal
-      setMeals(meals.map(meal => meal.id === savedMeal.id ? savedMeal : meal));
-    } else {
+    setMeals((currentMeals) => {
+      if (editingMeal) {
+        // Update existing meal
+        return currentMeals.map(meal =>
+          meal.id === savedMeal.id ? savedMeal : meal
+        );
+      }
       // Add new meal
-      setMeals([...meals, savedMeal]);
-    }
+      return [...currentMeals, savedMeal];
+    });
     setShowMealDialog(false);
     setEditingMeal(null);
+    setSaveFeedback(editingMeal ? 'Meal updated successfully' : 'Meal added successfully');
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => {
+      setSaveFeedback(null);
+    }, 4000);
   };
 
   const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
@@ -157,6 +177,30 @@ export function DayView({ date, onBack }: DayViewProps) {
 
   return (
     <div className="space-y-6">
+      {saveFeedback && (
+        <div
+          className="flex justify-between items-center rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 shadow-sm transition-opacity"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            <span>{saveFeedback}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (feedbackTimerRef.current) {
+                clearTimeout(feedbackTimerRef.current);
+              }
+              setSaveFeedback(null);
+            }}
+            className="text-green-700 hover:text-green-900"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">

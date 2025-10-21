@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, subDays, isSameMonth } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -42,6 +42,8 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [maxCalories, setMaxCalories] = useState<number>(2200);
   const [trendPeriod, setTrendPeriod] = useState<'week' | 'month'>('month');
   const [trendData, setTrendData] = useState<Array<{ date: string; calories: number; protein: number }>>([]);
+  const today = new Date();
+  const isCurrentMonth = isSameMonth(currentMonth, today);
 
   // Load user goals from localStorage
   useEffect(() => {
@@ -254,12 +256,13 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
         <CardContent className="flex flex-col items-center">
           <div className="w-full max-w-5xl mx-auto space-y-6">
             {/* Custom Month Navigation */}
-            <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
                 className="h-10 w-10"
+                aria-label="Previous month"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -271,8 +274,22 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                 size="icon"
                 onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
                 className="h-10 w-10"
+                aria-label="Next month"
               >
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-10 px-4"
+                onClick={() => {
+                  if (!isCurrentMonth) {
+                    setCurrentMonth(new Date());
+                  }
+                }}
+                disabled={isCurrentMonth}
+                aria-label="Go to current month"
+              >
+                Today
               </Button>
             </div>
             

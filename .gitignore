@@ -145,3 +145,4 @@ temp/
 
 # Puppeteer
 .puppeteer_cache/
+FUELIX_MODELS.md

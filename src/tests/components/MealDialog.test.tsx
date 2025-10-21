@@ -11,13 +11,13 @@ global.alert = jest.fn();
 
 describe('MealDialog', () => {
   const mockOnSave = jest.fn();
-  const mockOnCancel = jest.fn();
+  const mockOnOpenChange = jest.fn();
   const testDate = '2024-01-14';
 
   beforeEach(() => {
     (global.fetch as jest.Mock).mockClear();
     mockOnSave.mockClear();
-    mockOnCancel.mockClear();
+    mockOnOpenChange.mockClear();
     (global.alert as jest.Mock).mockClear();
   });
 
@@ -26,7 +26,7 @@ describe('MealDialog', () => {
       <MealDialog
         open={true}
         onSave={mockOnSave}
-        onCancel={mockOnCancel}
+        onOpenChange={mockOnOpenChange}
         date={testDate}
       />
     );
@@ -41,7 +41,7 @@ describe('MealDialog', () => {
       <MealDialog
         open={false}
         onSave={mockOnSave}
-        onCancel={mockOnCancel}
+        onOpenChange={mockOnOpenChange}
         date={testDate}
       />
     );
@@ -54,7 +54,7 @@ describe('MealDialog', () => {
       <MealDialog
         open={true}
         onSave={mockOnSave}
-        onCancel={mockOnCancel}
+        onOpenChange={mockOnOpenChange}
         date={testDate}
       />
     );
@@ -70,7 +70,7 @@ describe('MealDialog', () => {
       <MealDialog
         open={true}
         onSave={mockOnSave}
-        onCancel={mockOnCancel}
+        onOpenChange={mockOnOpenChange}
         date={testDate}
       />
     );
@@ -79,5 +79,51 @@ describe('MealDialog', () => {
     await user.click(screen.getByText('AI Estimation'));
     
     expect(screen.getByText('Food Description')).toBeInTheDocument();
+  });
+
+  it('shows inline guidance when AI estimation fails', async () => {
+    const user = userEvent.setup();
+
+    (global.fetch as jest.Mock).mockImplementation((input: RequestInfo) => {
+      if (typeof input === 'string' && input.includes('/api/llm/models')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [],
+        } as Response);
+      }
+      if (typeof input === 'string' && input.includes('/api/llm/estimate-calories')) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: 'Service unavailable' }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+    });
+
+    render(
+      <MealDialog
+        open={true}
+        onSave={mockOnSave}
+        onOpenChange={mockOnOpenChange}
+        date={testDate}
+      />
+    );
+
+    await user.click(screen.getByText('AI Estimation'));
+
+    const descriptionField = screen.getByLabelText(/food description/i);
+    await user.type(descriptionField, 'Grilled salmon with rice');
+
+    const estimateButton = screen.getByRole('button', { name: /estimate calories/i });
+    await user.click(estimateButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/we couldn't estimate calories: Service unavailable/i)
+      ).toBeInTheDocument();
+    });
   });
 });
