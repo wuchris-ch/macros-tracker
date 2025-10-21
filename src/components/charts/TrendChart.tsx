@@ -8,11 +8,12 @@ interface DailyData {
   date: string;
   calories: number | null;
   protein: number | null;
+  carbs: number | null;
 }
 
 interface TrendChartProps {
   data: DailyData[];
-  metric: 'calories' | 'protein';
+  metric: 'calories' | 'protein' | 'carbs';
   period: 'week' | 'month';
 }
 
@@ -22,6 +23,24 @@ interface TooltipPayload {
   payload: DailyData & { movingAverage?: number };
 }
 
+const metricConfig = {
+  calories: {
+    title: 'Calorie',
+    label: 'Calories',
+    color: '#f97316', // orange-500
+  },
+  protein: {
+    title: 'Protein',
+    label: 'Protein (g)',
+    color: '#2563eb', // blue-600
+  },
+  carbs: {
+    title: 'Carb',
+    label: 'Carbs (g)',
+    color: '#16a34a', // green-600
+  },
+} as const satisfies Record<TrendChartProps['metric'], { title: string; label: string; color: string }>;
+
 export function TrendChart({ data, metric, period }: TrendChartProps) {
 
   // Handle empty data
@@ -30,7 +49,7 @@ export function TrendChart({ data, metric, period }: TrendChartProps) {
       <Card>
         <CardHeader>
           <CardTitle>
-            {metric === 'calories' ? 'Calorie' : 'Protein'} Trends
+            {metricConfig[metric].title} Trends
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -43,7 +62,7 @@ export function TrendChart({ data, metric, period }: TrendChartProps) {
   }
 
   // Calculate moving average (7-day window) - only from non-null values
-  const calculateMovingAverage = (data: DailyData[], metric: 'calories' | 'protein') => {
+  const calculateMovingAverage = (data: DailyData[], metric: TrendChartProps['metric']) => {
     const windowSize = 7;
     return data.map((item, index) => {
       const start = Math.max(0, index - windowSize + 1);
@@ -76,8 +95,7 @@ export function TrendChart({ data, metric, period }: TrendChartProps) {
     ? validValues.reduce((a, b) => a + b, 0) / validValues.length
     : 0;
 
-  const metricLabel = metric === 'calories' ? 'Calories' : 'Protein (g)';
-  const color = metric === 'calories' ? '#f97316' : '#2563eb'; // orange-500 for calories, blue-600 for protein
+  const { label: metricLabel, color } = metricConfig[metric];
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
     if (active && payload && payload.length) {
@@ -110,7 +128,7 @@ export function TrendChart({ data, metric, period }: TrendChartProps) {
     <Card>
       <CardHeader>
         <CardTitle>
-          {metric === 'calories' ? 'Calorie' : 'Protein'} Trends
+          {metricConfig[metric].title} Trends
         </CardTitle>
       </CardHeader>
       <CardContent>

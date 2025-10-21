@@ -28,6 +28,13 @@ interface MobileCalendarViewProps {
   onDateSelect: (date: Date) => void;
 }
 
+type TrendDataPoint = {
+  date: string;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+};
+
 export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>([]);
@@ -36,7 +43,7 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsDateRange, setStatsDateRange] = useState<'all-time' | 'current-month' | 'custom'>('all-time');
   const [trendPeriod, setTrendPeriod] = useState<'week' | 'month'>('week');
-  const [trendData, setTrendData] = useState<Array<{ date: string; calories: number; protein: number }>>([]);
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
   const [minCalories, setMinCalories] = useState<number>(1800);
   const [maxCalories, setMaxCalories] = useState<number>(2200);
 
@@ -136,10 +143,11 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
         
         if (response.ok) {
           const data = await response.json();
-          const transformedData = data.map((day: DailyTotal) => ({
+          const transformedData: TrendDataPoint[] = data.map((day: DailyTotal) => ({
             date: day.date,
             calories: day.total_calories || null,
             protein: day.total_protein || null,
+            carbs: day.total_carbs || null,
           }));
           setTrendData(transformedData);
         }
@@ -158,6 +166,7 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
     return {
       calories: dayData?.total_calories || 0,
       protein: dayData?.total_protein || 0,
+      carbs: dayData?.total_carbs || 0,
       hasData: (dayData?.total_calories || 0) > 0
     };
   };
@@ -243,7 +252,7 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
           {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((date, index) => {
-              const { calories, protein, hasData } = getNutritionForDate(date);
+              const { calories, protein, carbs, hasData } = getNutritionForDate(date);
               const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
               const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
               const heatmapColor = getHeatmapColor(calories);
@@ -268,9 +277,14 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
                       <span className="text-[10px] font-medium bg-background/80 px-1 py-0.5 rounded text-foreground">
                         {calories}cal
                       </span>
-                      <span className="text-[10px] font-medium bg-background/80 px-1 py-0.5 rounded text-foreground">
-                        {protein.toFixed(0)}g
-                      </span>
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-[10px] font-medium bg-background/80 px-1 py-0.5 rounded text-foreground">
+                          {protein.toFixed(0)}g P
+                        </span>
+                        <span className="text-[10px] font-medium bg-background/80 px-1 py-0.5 rounded text-foreground">
+                          {carbs.toFixed(0)}g C
+                        </span>
+                      </div>
                     </div>
                   )}
                 </button>
@@ -403,9 +417,10 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
         </CardHeader>
         <CardContent className="pt-0">
           <Tabs defaultValue="calories" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-8">
+            <TabsList className="grid w-full grid-cols-3 h-8">
               <TabsTrigger value="calories" className="text-xs">Calories</TabsTrigger>
               <TabsTrigger value="protein" className="text-xs">Protein</TabsTrigger>
+              <TabsTrigger value="carbs" className="text-xs">Carbs</TabsTrigger>
             </TabsList>
             <TabsContent value="calories" className="mt-3">
               <TrendChart
@@ -418,6 +433,13 @@ export function MobileCalendarView({ onDateSelect }: MobileCalendarViewProps) {
               <TrendChart
                 data={trendData}
                 metric="protein"
+                period={trendPeriod}
+              />
+            </TabsContent>
+            <TabsContent value="carbs" className="mt-3">
+              <TrendChart
+                data={trendData}
+                metric="carbs"
                 period={trendPeriod}
               />
             </TabsContent>

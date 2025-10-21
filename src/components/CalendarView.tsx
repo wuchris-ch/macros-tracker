@@ -29,6 +29,13 @@ interface CalendarViewProps {
   onDateSelect: (date: Date) => void;
 }
 
+type TrendDataPoint = {
+  date: string;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+};
+
 export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>([]);
@@ -41,7 +48,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
   const [minCalories, setMinCalories] = useState<number>(1800);
   const [maxCalories, setMaxCalories] = useState<number>(2200);
   const [trendPeriod, setTrendPeriod] = useState<'week' | 'month'>('month');
-  const [trendData, setTrendData] = useState<Array<{ date: string; calories: number; protein: number }>>([]);
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
 
   // Load user goals from localStorage
   useEffect(() => {
@@ -153,10 +160,11 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
           // Transform data for TrendChart
           // Include ALL dates from the API response
           // Use null for days with 0 values so the chart can skip them with connectNulls
-          const transformedData = data.map((day: DailyTotal) => ({
+          const transformedData: TrendDataPoint[] = data.map((day: DailyTotal) => ({
             date: day.date,
             calories: day.total_calories || null,
             protein: day.total_protein || null,
+            carbs: day.total_carbs || null,
           }));
           setTrendData(transformedData);
         }
@@ -175,6 +183,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
     return {
       calories: dayData?.total_calories || 0,
       protein: dayData?.total_protein || 0,
+      carbs: dayData?.total_carbs || 0,
       hasData: (dayData?.total_calories || 0) > 0
     };
   };
@@ -201,7 +210,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
 
   // Custom day content to show nutrition totals with heatmap
   const renderDay = (date: Date) => {
-    const { calories, protein, hasData } = getNutritionForDate(date);
+    const { calories, protein, carbs, hasData } = getNutritionForDate(date);
     const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
     const heatmapColor = getHeatmapColor(calories);
     
@@ -217,9 +226,12 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                 {calories}cal
               </span>
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-1">
               <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full">
-                {protein.toFixed(0)}g
+                {protein.toFixed(0)}g P
+              </span>
+              <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full">
+                {carbs.toFixed(0)}g C
               </span>
             </div>
           </div>
@@ -248,7 +260,7 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Monthly Nutrition Overview</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Track your daily calories and protein intake at a glance
+            Track your daily calories, protein, and carbs intake at a glance
           </p>
         </CardHeader>
         <CardContent className="flex flex-col items-center">
@@ -551,9 +563,10 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="calories" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="calories">Calories</TabsTrigger>
                 <TabsTrigger value="protein">Protein</TabsTrigger>
+                <TabsTrigger value="carbs">Carbs</TabsTrigger>
               </TabsList>
               <TabsContent value="calories" className="mt-4">
                 <TrendChart
@@ -566,6 +579,13 @@ export function CalendarView({ onDateSelect }: CalendarViewProps) {
                 <TrendChart
                   data={trendData}
                   metric="protein"
+                  period={trendPeriod}
+                />
+              </TabsContent>
+              <TabsContent value="carbs" className="mt-4">
+                <TrendChart
+                  data={trendData}
+                  metric="carbs"
                   period={trendPeriod}
                 />
               </TabsContent>

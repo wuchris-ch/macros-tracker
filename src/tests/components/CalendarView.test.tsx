@@ -51,6 +51,7 @@ describe('CalendarView', () => {
       expect(screen.getByText('Monthly Nutrition Overview')).toBeInTheDocument();
       expect(screen.getByText('Quick Stats')).toBeInTheDocument();
       expect(screen.getByText('Nutrition Trends')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Carbs' })).toBeInTheDocument();
     });
   });
 
